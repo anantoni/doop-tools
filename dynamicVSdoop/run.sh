@@ -22,9 +22,9 @@ for f in averroes-dynamic-call-graphs/*.gxl ; do
 
 
 	### NORMALIZE FILES
-	dynamicVSdoop.sh $RESULTS_DIR/${b}.a2a.dyn $RESULTS_DIR/${b}.a2a.doop --normalize
-	dynamicVSdoop.sh $RESULTS_DIR/${b}.a2l.dyn $RESULTS_DIR/${b}.a2l.doop --normalize
-	dynamicVSdoop.sh $RESULTS_DIR/${b}.l2a.dyn $RESULTS_DIR/${b}.l2a.doop --normalize
+	./dynamicVSdoop.sh $RESULTS_DIR/${b}.a2a.dyn $RESULTS_DIR/${b}.a2a.doop --normalize
+	./dynamicVSdoop.sh $RESULTS_DIR/${b}.a2l.dyn $RESULTS_DIR/${b}.a2l.doop --normalize
+	./dynamicVSdoop.sh $RESULTS_DIR/${b}.l2a.dyn $RESULTS_DIR/${b}.l2a.doop --normalize
 
 	echo "a2a" > $RESULTS_DIR/${b}.mustCheck
 	cat $RESULTS_DIR/${b}.a2a.mustCheck.csv >> $RESULTS_DIR/${b}.mustCheck
