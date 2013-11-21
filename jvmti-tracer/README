@@ -1,0 +1,13 @@
+* Using the Tracer:
+
+The Tracer writes the method trace into a file, which it opens at VM start-up.
+This file need to be passed to the JVMTI agent as a command line argument:
+
+> java -agentpath:./build/tracer.so=<file> ..
+
+The resulting file contains tab-separated records easily processed with awk(1).
+Each entry starts with "CALL", followed by one triple of type descriptor, method
+name, and method descriptor. This triple designates the called method. It is
+followed by either a second triple, designating the calling method, or the
+string "ROOT", which indicates that the method has been called from outside
+Java-space.
