@@ -2,13 +2,10 @@ import blox, queries, gxl, sys
 
 from decimal import *
 from itertools import chain
+from prettyprint import *
 
 class Analysis:
     pass
-
-def enclose(s):
-    border = '+' + "".join('-' for i in range(len(s) + 2)) + '+';
-    return "{0}\n| {1} |\n{0}".format(border, s)
 
 def canonical(signature):
     rec, meth = signature.split(": ")
@@ -74,7 +71,7 @@ def callgraphs(db):
         for tp in ('a2a', 'a2l', 'l2a', 'l2l'):
             st, tt = tp.split('2')
             full = lambda x: "Appplication" if x == 'a' else "Library"
-            print enclose("{0} ===> {1}".format(full(st), full(tt)))
+            print rectprint("{0} ===> {1}".format(full(st), full(tt)))
             print "%20s: %6d" % ("Total static edges", nStatic[tp])
             print "%20s: %6d" % ("Total dynamic edges", nDynamic[tp])
             print "%20s: %6d" % ("Edges found", nFound[tp])
