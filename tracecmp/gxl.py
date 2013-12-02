@@ -4,31 +4,20 @@ class Probe:
     def __init__(self, jar):
         self._jar = jar
 
-    def __run__(self, opt, gxl, entrypoints):
+    def calledges(self, gxl):
         results = []
-        command = "java -jar {0} {1} -{2}".format(self._jar, gxl, opt)
-        
-        if entrypoints:
-            command.append("-e")
+        command = "java -jar {0} {1}".format(self._jar, gxl)
 
-        # print command
-
-        p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        p = subprocess.Popen(
+            command, shell = True, 
+            stdout = subprocess.PIPE, 
+            stderr = subprocess.STDOUT)
 
         for line in p.stdout.readlines()[1:]:
-            results.append(tuple(map(Probe.transform, line.strip().split(" ===> "))))
+            results.append(tuple(line.strip().split(" ===> ")))
 
         p.wait()
         return results
-
-    def a2a(self, gxl, entrypoints=False):
-        return self.__run__("a2a", gxl, entrypoints)
-    
-    def a2l(self, gxl, entrypoints=False):
-        return self.__run__("a2l", gxl, entrypoints)
-
-    def l2a(self, gxl, entrypoints=False):
-        return self.__run__("l2a", gxl, entrypoints)
 
     @staticmethod
     def transform(signature):

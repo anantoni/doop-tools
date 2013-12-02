@@ -1,11 +1,13 @@
-<project name="gxlutil" basedir="." default="main">
+<project name="gxlutilities" basedir="." default="main">
 
   <property name="src.dir"       value="src"/>
-
   <property name="build.dir"     value="build"/>
   <property name="classes.dir"   value="${build.dir}/classes"/>
-  <property name="jar.dir"       value="."/>
+  <property name="jar.dir"       value="${build.dir}/jar"/>
   <property name="lib.dir"       value="lib"/>
+  <property name="install.dir"   value="../tracecmp"/>
+
+  <property name="jar.file"      value="${jar.dir}/gxlutil.jar"/>
 
   <property name="main-class"    value="GxlPrinter"/>
   <property name="app.name"      value="GXL related utilities"/>
@@ -16,6 +18,11 @@
   </path>
 
   <!-- Targets -->
+
+  <!-- Install -->
+  <target name="install" depends="jar">
+    <copy file="${jar.file}" todir="${install.dir}"/>
+  </target>
 
   <!-- Clean -->
   <target name="clean">
@@ -35,7 +42,7 @@
   <!-- Create jar -->
   <target name="jar" depends="compile">
     <mkdir dir="${jar.dir}"/>
-    <jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${classes.dir}">
+    <jar destfile="${jar.file}" basedir="${classes.dir}">
       <zipgroupfileset dir="${lib.dir}" includes="**/*.jar"/>
       <manifest>
         <attribute name="Main-Class" value="${main-class}"/>
