@@ -1,0 +1,15 @@
+
+1. If we run an analysis for e.g. antlr, then soft link the results directory
+to a link with name "antlr".
+	ln -s $(readlink last-analysis) antlr
+
+
+2. Compile bytecodePrimitives2source C++ file.
+	g++ bytecodePrimitives2source.cpp -o bytecodePrimitives2source
+
+3. Create results directory to store all generated files.
+	mkdir results_dir
+
+4. Run the wrapping script, giving the results directory and the directory with
+the soft links as arguments
+	./run.sh results_dir ../../

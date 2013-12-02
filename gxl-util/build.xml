@@ -1,0 +1,49 @@
+<project name="gxlutil" basedir="." default="main">
+
+  <property name="src.dir"       value="src"/>
+
+  <property name="build.dir"     value="build"/>
+  <property name="classes.dir"   value="${build.dir}/classes"/>
+  <property name="jar.dir"       value="."/>
+  <property name="lib.dir"       value="lib"/>
+
+  <property name="main-class"    value="GxlPrinter"/>
+  <property name="app.name"      value="GXL related utilities"/>
+
+  <!-- Classpath -->
+  <path id="classpath">
+    <fileset dir="${lib.dir}"  includes="**/*.jar"/>
+  </path>
+
+  <!-- Targets -->
+
+  <!-- Clean -->
+  <target name="clean">
+    <delete dir="${build.dir}"/>
+  </target>
+
+  <!-- Compile bytecode -->
+  <target name="compile">
+    <mkdir dir="${classes.dir}"/>
+    <javac srcdir="${src.dir}" destdir="${classes.dir}" classpathref="classpath" debug="true" debuglevel="lines,vars,source">
+      <compilerarg value="-Xlint"/>
+      <compilerarg value="-Xlint:-fallthrough"/>
+    </javac>
+    <!-- javac srcdir="${src.dir}" destdir="${classes.dir}" extdirs="${lib.dir}"/-->
+  </target>
+
+  <!-- Create jar -->
+  <target name="jar" depends="compile">
+    <mkdir dir="${jar.dir}"/>
+    <jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${classes.dir}">
+      <zipgroupfileset dir="${lib.dir}" includes="**/*.jar"/>
+      <manifest>
+        <attribute name="Main-Class" value="${main-class}"/>
+      </manifest>
+    </jar>
+  </target>
+
+  <!-- Clean-build -->
+  <target name="clean-build" depends="clean,jar"/>
+
+</project>
