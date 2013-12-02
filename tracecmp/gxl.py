@@ -1,8 +1,10 @@
-import subprocess
+import os, subprocess
 
 class Probe:
-    def __init__(self, jar):
-        self._jar = jar
+    def __init__(self):
+        dirpath = os.path.dirname(__file__)
+        jarpath = os.path.join(dirpath, 'gxlutil.jar')
+        self._jar = jarpath
 
     def calledges(self, gxl):
         results = []

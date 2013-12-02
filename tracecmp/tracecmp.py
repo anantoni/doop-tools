@@ -2,7 +2,6 @@ import blox, queries, gxl, sys
 
 from decimal import *
 from itertools import chain
-from os.path import dirname, join
 
 class Analysis:
     pass
@@ -16,9 +15,9 @@ def canonical(signature):
     simplename, delim, args = meth.partition('(')
     return rec + ': ' + simplename.rpartition(' ')[2] + '(' + args
 
-def callgraphs(jarpath, db):
+def callgraphs(db):
     connector = blox.Connector(db)
-    probe = gxl.Probe(jarpath)
+    probe = gxl.Probe()
 
     def compare(gxl):
         # Get a static analysis from a doop database
@@ -90,10 +89,9 @@ def callgraphs(jarpath, db):
 
     return compare
 
-def main(jar, workspace, trace):
-    comp = callgraphs(jar, workspace)
+def main(workspace, trace):
+    comp = callgraphs(workspace)
     comp(trace)
 
 if __name__ == "__main__":
-    jarpath = join(dirname(gxl.__file__), 'gxlutil.jar')
-    main(jarpath, sys.argv[1], sys.argv[2])
+    main(sys.argv[1], sys.argv[2])
