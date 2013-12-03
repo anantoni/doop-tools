@@ -1,3 +1,8 @@
+METHODS = """
+_(meth) <- 
+   MethodSignatureRef(meth).
+"""
+
 APP_METHODS = """
 _(meth) <- 
    Stats:Simple:ApplicationMethod(meth).
