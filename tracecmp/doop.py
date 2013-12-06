@@ -25,6 +25,9 @@ class Connector:
     def __parse_method(cls, line):
         return cls.canonicalize(line[1:-1])
 
+    def classes(self):
+        return self.__query(CLASSES)
+
     def calledges(self):
         return map(self.__parse_edge, self.__query(CALL_EDGES))
 

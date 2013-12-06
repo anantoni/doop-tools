@@ -1,3 +1,8 @@
+CLASSES = """
+_(c) <- 
+   ClassType(c).
+"""
+
 METHODS = """
 _(meth) <- 
    MethodSignatureRef(meth).

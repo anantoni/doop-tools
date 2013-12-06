@@ -1,14 +1,15 @@
 import os, subprocess
 
 class Probe:
-    def __init__(self):
-        dirpath = os.path.dirname(__file__)
-        jarpath = os.path.join(dirpath, 'gxlutil.jar')
-        self._jar = jarpath
+    _JARDIR  = os.path.dirname(__file__)
+    _JARPATH = os.path.join(_JARDIR, 'gxlutil.jar')
 
-    def calledges(self, gxl):
+    def __init__(self, trace):
+        self._trace = trace
+
+    def calledges(self):
         results = []
-        command = "java -jar {0} {1}".format(self._jar, gxl)
+        command = "java -jar {0} {1}".format(self._JARPATH, self._trace)
 
         p = subprocess.Popen(
             command, shell = True, 

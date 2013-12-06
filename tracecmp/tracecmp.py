@@ -3,15 +3,9 @@ import doop, gxl, sys
 from decimal import *
 from itertools import chain
 from prettyprint import *
+from stats import Statistics
 
-class Statistics:
-    pass
-
-def diff(db, trace):
-
-    def fieldmapping(app):
-        f = lambda n : 'a' if n in app else 'l'
-        return lambda (s,t): '{0}2{1}'.format(f(s), f(t))
+def display(static, dynamic, diff):
 
     def maketitle():
         f = lambda x: "Appplication" if x == 'a' else "Library"
@@ -20,47 +14,12 @@ def diff(db, trace):
             return rectprint("{0} ===> {1}".format(f(st), f(tt)))
         return trans
 
-    doopconn = doop.Connector(db)
-    probe = gxl.Probe()
-
-    # Get statistics from a doop static analysis
-    doopstats = Statistics()
-    edgeset = fieldmapping(doopconn.methods(app_only = True))
-
-    doopstats.a2a = doopconn.calledges(_from = 'app', _to = 'app')
-    doopstats.a2l = doopconn.calledges(_from = 'app', _to = 'lib')
-    doopstats.l2a = doopconn.calledges(_from = 'lib', _to = 'app')
-    doopstats.l2l = doopconn.calledges(_from = 'lib', _to = 'lib')
-    doopstats.nulls = doopconn.nulls()
-
-    # for (s,t) in doopstats.a2a:
-    #    print s, "===>", t
-
-    # Get dynamic analysis statistics from a gxl trace
-    dynstats = Statistics()
-
-    for tp in ('a2a', 'a2l', 'l2a', 'l2l'):
-        setattr(dynstats, tp, [])
-
-    for e in probe.calledges(trace):
-        getattr(dynstats, edgeset(e)).append(e)
-
-    # Compute dynamic \ static
-    diff = Statistics()
-
-    # isgen = reflect.generated(doopconn)
-
-    # Compute diff
-    for tp in ('a2a', 'a2l', 'l2a', 'l2l'):
-        dynamic, static = getattr(dynstats, tp), getattr(doopstats, tp)
-        setattr(diff, tp, [e for e in dynamic if e not in static])
-
     caption = maketitle()
 
     # Print results
     for tp in ('a2a', 'a2l', 'l2a', 'l2l'):
-        nStatic  = len(getattr(doopstats, tp))
-        nDynamic = len(getattr(dynstats, tp))
+        nStatic  = len(getattr(static, tp))
+        nDynamic = len(getattr(dynamic, tp))
         nMissing = len(getattr(diff, tp))
 
         print caption(tp)
@@ -72,7 +31,48 @@ def diff(db, trace):
             perc = Decimal(100 * nMissing) / nDynamic
             print "%20s: %6d (%.2f%%)" % ("Edges missing", nMissing, perc)
 
-    return diff
+def diff(db, trace):
+
+    def runtime_created(conn):
+        methods = conn.methods()
+        classes = conn.classes()
+        formeth  = lambda x: x not in methods
+        forclass = lambda x: x not in classes
+        return forclass, formeth
+
+    doopconn = doop.Connector(db)
+    probe = gxl.Probe(trace)
+
+    # Get statistics from a doop static analysis
+    static = Statistics.from_doop(doopconn)
+
+    # Get dynamic analysis statistics from a gxl trace
+    dynamic = Statistics.from_trace(probe, doopconn)
+
+    # Compute dynamic \ static
+    diff = Statistics.difference(dynamic, static)
+
+    # Runtime-created classes / methods
+    unknown_class, unknown_method = runtime_created(doopconn)
+    rt_generated = set()
+
+    # Compute diff
+    for tp in ('a2a', 'a2l', 'l2a', 'l2l'):
+        missing = getattr(diff, tp)
+
+        for (s,t) in missing:
+            for meth in (s,t):
+                receiver = meth.split(':')[0]
+                if receiver in rt_generated:
+                    continue
+                if unknown_class(receiver):
+                    rt_generated.add(receiver)
+                    print "Runtime-created <class>:  ", receiver
+                elif unknown_method(meth):
+                    print "Runtime-created <method>:     ", meth
+
+    display(static, dynamic, diff)
+    return (static, dynamic, diff)
 
 if __name__ == "__main__":
     diff(sys.argv[1], sys.argv[2])
