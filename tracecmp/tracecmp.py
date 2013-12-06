@@ -1,88 +1,78 @@
-import blox, queries, gxl, sys
+import doop, gxl, sys
 
 from decimal import *
 from itertools import chain
 from prettyprint import *
 
-class Analysis:
+class Statistics:
     pass
 
-def canonical(signature):
-    rec, meth = signature.split(": ")
-    simplename, delim, args = meth.partition('(')
-    return rec + ': ' + simplename.rpartition(' ')[2] + '(' + args
+def diff(db, trace):
 
-def callgraphs(db, trace):
-    connector = blox.Connector(db)
+    def fieldmapping(app):
+        f = lambda n : 'a' if n in app else 'l'
+        return lambda (s,t): '{0}2{1}'.format(f(s), f(t))
+
+    def maketitle():
+        f = lambda x: "Appplication" if x == 'a' else "Library"
+        def trans(tp):
+            st, tt = tp.split('2')
+            return rectprint("{0} ===> {1}".format(f(st), f(tt)))
+        return trans
+
+    doopconn = doop.Connector(db)
     probe = gxl.Probe()
 
-    # Get a static analysis from a doop database
-    doop = Analysis()
+    # Get statistics from a doop static analysis
+    doopstats = Statistics()
+    edgeset = fieldmapping(doopconn.methods(app_only = True))
 
-    parse = lambda l: tuple(canonical(x) for x in l[1:-1].split(">, <"))
+    doopstats.a2a = doopconn.calledges(_from = 'app', _to = 'app')
+    doopstats.a2l = doopconn.calledges(_from = 'app', _to = 'lib')
+    doopstats.l2a = doopconn.calledges(_from = 'lib', _to = 'app')
+    doopstats.l2l = doopconn.calledges(_from = 'lib', _to = 'lib')
+    doopstats.nulls = doopconn.nulls()
 
-    app = set(canonical(m[1:-1]) for m in connector.query(queries.APP_METHODS))
-
-    doop.a2a = map(parse, connector.query(queries.APP_TO_APP))
-    doop.a2l = map(parse, connector.query(queries.APP_TO_LIB))
-    doop.l2a = map(parse, connector.query(queries.LIB_TO_APP))
-    doop.l2l = map(parse, connector.query(queries.LIB_TO_LIB))
-    doop.nulls = map(parse, connector.query(queries.NULLS, toprint = "_n"))
-
-    # for (s,t) in doop.a2a:
+    # for (s,t) in doopstats.a2a:
     #    print s, "===>", t
 
-    # Get a dynamic analysis from a gxl trace
-    dyn = Analysis()
-    dyn.a2a = []
-    dyn.a2l = []
-    dyn.l2a = []
-    dyn.l2l = []
-
-    for (s,t) in probe.calledges(trace):
-        f = lambda n : 'a' if n in app else 'l'
-        field = '{0}2{1}'.format(f(s), f(t))
-        getattr(dyn, field).append((s,t))
-
-    # Initialization
-    nDynamic = {}
-    nStatic  = {}
-    nFound   = {}
-    missing  = {}
+    # Get dynamic analysis statistics from a gxl trace
+    dynstats = Statistics()
 
     for tp in ('a2a', 'a2l', 'l2a', 'l2l'):
-        nDynamic[tp] = len(getattr(dyn, tp))
-        nStatic[tp]  = len(getattr(doop, tp))
-        nFound[tp]   = 0
-        missing[tp]  = []
+        setattr(dynstats, tp, [])
+
+    for e in probe.calledges(trace):
+        getattr(dynstats, edgeset(e)).append(e)
+
+    # Compute dynamic \ static
+    diff = Statistics()
+
+    # isgen = reflect.generated(doopconn)
 
     # Compute diff
     for tp in ('a2a', 'a2l', 'l2a', 'l2l'):
-        dynamic, static = getattr(dyn, tp), getattr(doop, tp)
-        for (s,t) in dynamic:
-            if (s,t) in static:
-                nFound[tp] += 1
-            else:
-                missing[tp].append((s,t))
+        dynamic, static = getattr(dynstats, tp), getattr(doopstats, tp)
+        setattr(diff, tp, [e for e in dynamic if e not in static])
+
+    caption = maketitle()
 
     # Print results
     for tp in ('a2a', 'a2l', 'l2a', 'l2l'):
-        st, tt = tp.split('2')
-        full = lambda x: "Appplication" if x == 'a' else "Library"
+        nStatic  = len(getattr(doopstats, tp))
+        nDynamic = len(getattr(dynstats, tp))
+        nMissing = len(getattr(diff, tp))
 
-        print rectprint("{0} ===> {1}".format(full(st), full(tt)))
-        print "%20s: %6d" % ("Total static edges", nStatic[tp])
-        print "%20s: %6d" % ("Total dynamic edges", nDynamic[tp])
-        print "%20s: %6d" % ("Edges found", nFound[tp])
-        
-        nMissing = len(missing[tp])
-        nTotal   = nDynamic[tp]
+        print caption(tp)
+        print "%20s: %6d" % ("Total static edges", nStatic)
+        print "%20s: %6d" % ("Total dynamic edges", nDynamic)
+        print "%20s: %6d" % ("Edges found", nDynamic - nMissing)
 
-        if nTotal > 0:
-            perc = Decimal(100 * nMissing) / nTotal
+        if nDynamic > 0:
+            perc = Decimal(100 * nMissing) / nDynamic
             print "%20s: %6d (%.2f%%)" % ("Edges missing", nMissing, perc)
 
-    return missing
+    return diff
 
 if __name__ == "__main__":
-    callgraphs(sys.argv[1], sys.argv[2])
+    diff(sys.argv[1], sys.argv[2])

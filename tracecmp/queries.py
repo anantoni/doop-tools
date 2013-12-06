@@ -8,6 +8,12 @@ _(meth) <-
    Stats:Simple:ApplicationMethod(meth).
 """
 
+CALL_EDGES = """
+_(from, to) <- 
+   Stats:Simple:InsensCallGraphEdge(callsite, to), 
+   Instruction:Method[callsite] = from.
+"""
+
 APP_TO_APP = """
 _(from, to) <- 
    Stats:Simple:InsensCallGraphEdge(callsite, to), 
