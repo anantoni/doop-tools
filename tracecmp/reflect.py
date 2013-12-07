@@ -14,6 +14,16 @@ class NoFactsRefinement(Refinement):
             return True
         return False
 
+    def prune_method(self, meth):
+        # Firstly, check for missing class
+        if Refinement.prune_method(self, meth):
+            return True
+        # Then, check for missing method
+        if not meth in self.methods:
+            self.pruned_methods.add(meth)
+            return True
+        return False
+
     def report(self):
         for klass in self.pruned_classes:
             print "Unknown <class>:  ", klass

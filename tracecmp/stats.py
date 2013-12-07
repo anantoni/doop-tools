@@ -54,8 +54,10 @@ class Refinement:
         return newstats
 
     def prune_edge(self, (s,t)):
-        for m in (s,t):
-            return self.prune_class(m.split(':')[0])
+        return self.prune_method(s) or self.prune_method(t)
+
+    def prune_method(self, meth):
+        return self.prune_class(meth.split(':')[0])
 
     def prune_class(self, klass):
         return False
