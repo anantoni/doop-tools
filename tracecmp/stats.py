@@ -1,4 +1,3 @@
-
 class Statistics:
     def __init__(self):
         self.a2a = []
@@ -38,3 +37,28 @@ class Statistics:
             setattr(stats, tp, [e for e in xs if e not in ys])
         return stats
 
+
+class Refinement:
+
+    def __init__(self):
+        pass
+
+    def __call__(self, oldstats):
+        newstats = Statistics()
+        for tp in ('a2a', 'a2l', 'l2a', 'l2l'):
+            missing = getattr(oldstats, tp)
+            pruned  = getattr(newstats, tp)
+            for e in missing:
+                if not self.prune_edge(e):
+                    pruned.append(e)
+        return newstats
+
+    def prune_edge(self, (s,t)):
+        for m in (s,t):
+            return self.prune_class(m.split(':')[0])
+
+    def prune_class(self, klass):
+        return False
+
+    def report(self):
+        raise NotImplementedError("Please Implement this method")

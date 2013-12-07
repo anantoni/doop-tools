@@ -1,4 +1,4 @@
-import doop, gxl, sys
+import doop, gxl, java, reflect, synthetic, sys
 
 from decimal import *
 from itertools import chain
@@ -31,14 +31,7 @@ def display(static, dynamic, diff):
             perc = Decimal(100 * nMissing) / nDynamic
             print "%20s: %6d (%.2f%%)" % ("Edges missing", nMissing, perc)
 
-def diff(db, trace):
-
-    def runtime_created(conn):
-        methods = conn.methods()
-        classes = conn.classes()
-        formeth  = lambda x: x not in methods
-        forclass = lambda x: x not in classes
-        return forclass, formeth
+def diff(db, trace, **kwargs):
 
     doopconn = doop.Connector(db)
     probe = gxl.Probe(trace)
@@ -52,27 +45,25 @@ def diff(db, trace):
     # Compute dynamic \ static
     diff = Statistics.difference(dynamic, static)
 
-    # Runtime-created classes / methods
-    unknown_class, unknown_method = runtime_created(doopconn)
-    rt_generated = set()
+    # Construct a transformation chain
+    diffchain = [(diff, 'Default')]
 
-    # Compute diff
-    for tp in ('a2a', 'a2l', 'l2a', 'l2l'):
-        missing = getattr(diff, tp)
+    def add_filter(refinement, msg):
+        last = diffchain[-1][0]
+        diffchain.append((refinement(last), msg))
+        refinement.report()
 
-        for (s,t) in missing:
-            for meth in (s,t):
-                receiver = meth.split(':')[0]
-                if receiver in rt_generated:
-                    continue
-                if unknown_class(receiver):
-                    rt_generated.add(receiver)
-                    print "Runtime-created <class>:  ", receiver
-                elif unknown_method(meth):
-                    print "Runtime-created <method>:     ", meth
+    # Compute (dynamic \ static) \ synthetic
+    if 'cp' in kwargs:
+        add_filter(synthetic.Refinement(kwargs['cp']), 'No synthetic')
 
-    display(static, dynamic, diff)
-    return (static, dynamic, diff)
+    # Statically unknown classes / methods
+    add_filter(reflect.NoFactsRefinement(doopconn), 'No facts')
+
+    for (diff, msg) in diffchain:
+        print "--- {0} ---".format(msg)
+        display(static, dynamic, diff)
+    return (static, dynamic, diffchain)
 
 if __name__ == "__main__":
-    diff(sys.argv[1], sys.argv[2])
+    diff(sys.argv[1], sys.argv[2], cp = sys.argv[4])
