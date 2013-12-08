@@ -59,9 +59,12 @@ def diff(db, trace, **kwargs):
 
     # Statically unknown classes / methods
     add_filter(reflect.NoFactsRefinement(doopconn), 'No facts')
+    
+    nSteps = len(diffchain)
+    steps  = range(1, 1 + nSteps)
 
-    for (diff, msg) in diffchain:
-        print "--- {0} ---".format(msg)
+    for ((diff, msg), step) in zip(diffchain, steps):
+        print "\n--- {0}. Step {1}/{2} ---\n".format(msg, step, nSteps)
         display(static, dynamic, diff)
 
     return (static, dynamic, diffchain)
