@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import argparse, doop, gxl, reflect, synthetic, sys
 from decimal import *
 from prettyprint import *
