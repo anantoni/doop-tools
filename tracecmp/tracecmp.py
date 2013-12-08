@@ -1,12 +1,9 @@
-import doop, gxl, java, reflect, synthetic, sys
-
+import argparse, doop, gxl, reflect, synthetic, sys
 from decimal import *
-from itertools import chain
 from prettyprint import *
 from stats import Statistics
 
 def display(static, dynamic, diff):
-
     def maketitle():
         f = lambda x: "Appplication" if x == 'a' else "Library"
         def trans(tp):
@@ -32,7 +29,6 @@ def display(static, dynamic, diff):
             print "%20s: %6d (%.2f%%)" % ("Edges missing", nMissing, perc)
 
 def diff(db, trace, **kwargs):
-
     doopconn = doop.Connector(db)
     probe = gxl.Probe(trace)
 
@@ -54,8 +50,10 @@ def diff(db, trace, **kwargs):
         refinement.report()
 
     # Compute (dynamic \ static) \ synthetic
-    if 'cp' in kwargs:
-        add_filter(synthetic.Refinement(kwargs['cp']), 'No synthetic')
+    classpath = kwargs.get('cp', None)
+
+    if classpath:
+        add_filter(synthetic.Refinement(classpath), 'No synthetic')
 
     # Statically unknown classes / methods
     add_filter(reflect.NoFactsRefinement(doopconn), 'No facts')
@@ -63,7 +61,26 @@ def diff(db, trace, **kwargs):
     for (diff, msg) in diffchain:
         print "--- {0} ---".format(msg)
         display(static, dynamic, diff)
+
     return (static, dynamic, diffchain)
 
+def main():
+    # Command-line argument parsing
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('-cp', metavar = 'classpath', action='append',
+        help = 'for locating java classes')
+    parser.add_argument('workspace', 
+        help = 'the db directory of a Doop static analysis')
+    parser.add_argument('trace', 
+        help = 'dynamic trace in gxl format')
+
+    args = parser.parse_args(sys.argv[1:])
+
+    if args.cp:
+        args.cp = ':'.join(args.cp)
+
+    diff(args.workspace, args.trace, cp = args.cp)
+
 if __name__ == "__main__":
-    diff(sys.argv[1], sys.argv[2], cp = sys.argv[4])
+    main()
