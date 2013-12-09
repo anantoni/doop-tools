@@ -8,9 +8,19 @@ _(meth) <-
    MethodSignatureRef(meth).
 """
 
+REACHABLE_METHODS = """
+_(meth) <- 
+   Reachable(meth).
+"""
+
 APP_METHODS = """
 _(meth) <- 
    Stats:Simple:ApplicationMethod(meth).
+"""
+
+REACHABLE_APP_METHODS = """
+_(meth) <- 
+   Stats:Simple:ReachableApplicationMethod(_, meth).
 """
 
 CALL_EDGES = """

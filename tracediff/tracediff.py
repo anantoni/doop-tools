@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import argparse, doop, gxl, reflect, synthetic, sys
+import argparse, doop, gxl, reflect, synthetic, sys, unreachable
 from decimal import *
 from prettyprint import *
 from stats import Statistics
@@ -59,6 +59,9 @@ def diff(db, trace, **kwargs):
 
     # Statically unknown classes / methods
     add_filter(reflect.NoFactsRefinement(doopconn), 'No facts')
+
+    # Prune call-edges with unreachable origin
+    add_filter(unreachable.Refinement(doopconn), 'Unreachable origin')
     
     nSteps = len(diffchain)
     steps  = range(1, 1 + nSteps)

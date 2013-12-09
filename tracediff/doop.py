@@ -41,8 +41,11 @@ class Connector:
             q = LIB_TO_APP if _to == 'app' else LIB_TO_LIB
         return map(self.__parse_edge, self.__query(q))
 
-    def methods(self, app_only = False):
-        q = APP_METHODS if app_only else METHODS
+    def methods(self, app_only = False, reachable = False):
+        if not reachable:
+            q = APP_METHODS if app_only else METHODS
+        else:
+            q = REACHABLE_APP_METHODS if app_only else REACHABLE_METHODS
         return set(map(self.__parse_method, self.__query(q)))
 
     def nulls(self):
