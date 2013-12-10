@@ -3,6 +3,11 @@ _(c) <-
    ClassType(c).
 """
 
+INITIALIZED_CLASSES = """
+_(c) <- 
+   InitializedClass(c).
+"""
+
 METHODS = """
 _(meth) <- 
    MethodSignatureRef(meth).

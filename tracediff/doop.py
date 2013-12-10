@@ -28,6 +28,9 @@ class Connector:
     def classes(self):
         return self.__query(CLASSES)
 
+    def initialized_classes(self):
+        return self.__query(INITIALIZED_CLASSES)
+
     def calledges(self):
         return map(self.__parse_edge, self.__query(CALL_EDGES))
 

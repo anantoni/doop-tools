@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import argparse, doop, gxl, reflect, synthetic, sys, unreachable
+import argparse, clinit, doop, gxl, reflect, synthetic, sys, unreachable
 from decimal import *
 from prettyprint import *
 from stats import Statistics
@@ -50,6 +50,9 @@ def diff(db, trace, **kwargs):
         last = diffchain[-1][0]
         diffchain.append((refinement(last), msg))
         refinement.report()
+
+    # filter false positive calls to <clinit>
+    add_filter(clinit.ClassInitRefinement(doopconn), '<clinit>')
 
     # Compute (dynamic \ static) \ synthetic
     classpath = kwargs.get('cp', None)
