@@ -1,3 +1,6 @@
+How to setup:
+$ cd ../gxl-util/ && ant install
+
 For usage, run:
 $ ./tracediff.py -h
 

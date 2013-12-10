@@ -70,9 +70,15 @@ def diff(db, trace, **kwargs):
         print "\n--- {0}. Step {1}/{2} ---\n".format(msg, step, nSteps)
         display(static, dynamic, diff)
 
-    return (static, dynamic, diffchain)
+    for e in diffchain[-1][0].a2a:
+        print e
 
-def main():
+    return static, dynamic, diffchain
+
+def main(cmd):
+    if isinstance(cmd, basestring):
+        cmd = cmd.split()
+
     # Command-line argument parsing
     parser = argparse.ArgumentParser()
 
@@ -83,12 +89,11 @@ def main():
     parser.add_argument('trace', 
         help = 'dynamic trace in gxl format')
 
-    args = parser.parse_args(sys.argv[1:])
-
+    args = parser.parse_args(cmd)
     if args.cp:
         args.cp = ':'.join(args.cp)
 
     diff(args.workspace, args.trace, cp = args.cp)
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
