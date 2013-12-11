@@ -73,8 +73,11 @@ def diff(db, trace, **kwargs):
         print "\n--- {0}. Step {1}/{2} ---\n".format(msg, step, nSteps)
         display(static, dynamic, diff)
 
-    for e in diffchain[-1][0].a2a:
-        print e
+    for tp in ('a2a', 'a2l', 'l2a', 'l2l'):
+        if tp in kwargs.get('toprint', []):
+            print '\nPrinting {0} edges...'.format(tp)
+            for (s,t) in getattr(diffchain[-1][0], tp):
+                print s, '===>', t
 
     return static, dynamic, diffchain
 
@@ -83,7 +86,8 @@ def main(cmd):
         cmd = cmd.split()
 
     # Command-line argument parsing
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        usage = 'tracediff.py [-h] [options] workspace trace')
 
     parser.add_argument('-cp', metavar = 'classpath', action='append',
         help = 'for locating java classes')
@@ -92,11 +96,28 @@ def main(cmd):
     parser.add_argument('trace', 
         help = 'dynamic trace in gxl format')
 
-    args = parser.parse_args(cmd)
-    if args.cp:
-        args.cp = ':'.join(args.cp)
+    printargs = parser.add_argument_group(
+        'printed edges', 
+        'edges to print on the final step (multiple selections allowed)')
+    printargs.add_argument('-a2a', dest = 'toprint', 
+        action='append_const', const = 'a2a',
+        help = 'application to application')
+    printargs.add_argument('-a2l', dest = 'toprint', 
+        action='append_const', const = 'a2l',
+        help = 'application to library')
+    printargs.add_argument('-l2a', dest = 'toprint', 
+        action='append_const', const = 'l2a',
+        help = 'library to application')
+    printargs.add_argument('-l2l', dest = 'toprint', 
+        action='append_const', const = 'l2l',
+        help = 'library to library')
+    
+    parser.set_defaults(toprint = [], cp = [])
 
-    diff(args.workspace, args.trace, cp = args.cp)
+    args = parser.parse_args(cmd)
+    args.cp = ':'.join(args.cp)
+        
+    diff(args.workspace, args.trace, cp = args.cp, toprint = args.toprint)
 
 if __name__ == "__main__":
     main(sys.argv[1:])
