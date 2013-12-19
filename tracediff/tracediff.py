@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import argparse, clinit, doop, gxl, reflect, synthetic, sys, unreachable
+import argparse, clinit, classloader, doop, gxl, reflect, synthetic, sys, unreachable
 from decimal import *
 from prettyprint import *
 from stats import Statistics
@@ -53,6 +53,9 @@ def diff(db, trace, **kwargs):
 
     # filter false positive calls to <clinit>
     add_filter(clinit.ClassInitRefinement(doopconn), '<clinit>')
+
+    # filter calls to java.lang.ClassLoader methods
+    add_filter(classloader.ClassLoaderRefinement(doopconn), 'No ClassLoader methods')
 
     # Compute (dynamic \ static) \ synthetic
     classpath = kwargs.get('cp', None)
