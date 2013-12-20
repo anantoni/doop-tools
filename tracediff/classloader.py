@@ -5,8 +5,10 @@ class ClassLoaderRefinement(Refinement):
         Refinement.__init__(self)
 
     def prune_edge(self, (s,t)):
-        rec, _ = t.split(": ")
-        return rec == 'java.lang.ClassLoader'
+		# loadClass is invoked by the VM when a class needs to be loaded and
+		# checkPackageAccess is invoked after loading the class
+		return t in ('java.lang.ClassLoader: loadClass(java.lang.String)',
+                     'java.lang.ClassLoader: checkPackageAccess(java.lang.Class,java.security.ProtectionDomain)')
 
     def report(self):
         pass
