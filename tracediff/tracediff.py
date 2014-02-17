@@ -7,7 +7,7 @@ from stats import Statistics
 
 def display(static, dynamic, diff):
     def maketitle():
-        f = lambda x: "Appplication" if x == 'a' else "Library"
+        f = lambda x: "Application" if x == 'a' else "Library"
         def trans(tp):
             st, tt = tp.split('2')
             return rectprint("{0} ===> {1}".format(f(st), f(tt)))
