@@ -51,5 +51,8 @@ class Connector:
             q = REACHABLE_APP_METHODS if app_only else REACHABLE_METHODS
         return set(map(self.__parse_method, self.__query(q)))
 
+    def native_methods(self):
+        return set(map(self.__parse_method, self.__query(NATIVE_METHODS)))
+
     def nulls(self):
         return map(self.__parse_edge, self.__query(NULLS, toprint = "_n"))

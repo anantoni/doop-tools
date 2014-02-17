@@ -23,6 +23,11 @@ _(meth) <-
    Stats:Simple:ApplicationMethod(meth).
 """
 
+NATIVE_METHODS = """
+_(meth) <- 
+   MethodSignatureRef(meth), MethodModifier("native", meth).
+"""
+
 REACHABLE_APP_METHODS = """
 _(meth) <- 
    Stats:Simple:ReachableApplicationMethod(_, meth).
