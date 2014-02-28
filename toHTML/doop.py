@@ -63,32 +63,36 @@ class Connector:
 
 
 	def varPointsTo(self, method):
-		return self.__query(VAR_POINTS_TO.format(method))
+		return self.__query(VAR_POINTS_TO.format(method), toprint = "_")
 
-	def nullVars(self, method):
-		return self.__query(NULL_VARS.format(method), toprint = "_")
-
-
-	def virtualCallGraph(self, method):
-		return self.__query(VIRTUAL_CALL_GRAPH.format(method))
+	def varPointsToCounts(self, method):
+		return self.__query(VAR_POINTS_TO_COUNTS.format(method), toprint = "_")
 
 
 	def fldPointsTo(self, method):
-		return self.__query(FLD_POINTS_TO.format(method))
+		return self.__query(FLD_POINTS_TO.format(method), toprint = "_")
 
-	def nullFldPointsTo(self, method):
-		return self.__query(NULL_FLD_POINTS_TO.format(method), toprint = "_")
+	def fldPointsToCounts(self, method):
+		return self.__query(FLD_POINTS_TO_COUNTS.format(method), toprint = "_")
 
 
 	def staticFldPointsTo(self, method):
-		return self.__query(STATIC_FLD_POINTS_TO.format(method))
+		return self.__query(STATIC_FLD_POINTS_TO.format(method), toprint = "_")
 
-	def nullStaticFldPointsTo(self, method):
-		return self.__query(NULL_STATIC_FLD_POINTS_TO.format(method), toprint = "_")
+	def staticFldPointsToCounts(self, method):
+		return self.__query(STATIC_FLD_POINTS_TO_COUNTS.format(method), toprint = "_")
 
 
 	def arrayPointsTo(self, method):
-		return self.__query(ARRAY_POINTS_TO.format(method))
+		return self.__query(ARRAY_POINTS_TO.format(method), toprint = "_")
 
-	def nullArrayPointsTo(self, method):
-		return self.__query(NULL_ARRAY_POINTS_TO.format(method), toprint = "_")
+	def arrayPointsToCounts(self, method):
+		return self.__query(ARRAY_POINTS_TO_COUNTS.format(method), toprint = "_")
+
+
+	def virtualCallGraph(self, method):
+		return self.__query(VIRTUAL_CALL_GRAPH.format(method), toprint = "_")
+
+	def virtualCallGraphCounts(self, method):
+		return self.__query(VIRTUAL_CALL_GRAPH_COUNTS.format(method), toprint = "_")
+

@@ -3,37 +3,116 @@
 import argparse, doop, sys, re
 from decimal import *
 
+def cleanVar(var):
+	_, var = var.split("/")
+	return var
+
 def cleanFld(fld):
 	_, fld = fld.split(": ")
 	_, fld = fld.split(" ")
 	return fld[:-1]
 
-
+def cleanHeap(heap):
+	return heap.replace("<", "").replace(">", "")
 
 def filterHTML(value):
 	return value.replace("<", "&lt;").replace(">", "&gt;")
 
-def genPart(id, title):
-	return "<div id=\"{0}\"><h2>{1}</h2>".format(id, title)
-def genPartEnd():
-	return "</div>"
+def printInvocations(res, linkInvocation=False):
+	returnStr = mainStr = ""
+	prev = None
+	for elem in res:
+		parts = elem.split(", ")
+		_, invo = parts[0].split("/", 1)
+		invo = filterHTML(invo)
+		var = genLink( cleanVar(parts[2]) )
 
-def genVar(var, idSuffix=""):
-	return "<a href=\"#{0}{1}\">{0}</a>".format(var, idSuffix)
+		if invo != prev:
+			if prev != None:
+				print genElem( "{0}{1}{2})".format(returnStr, mainStr, ", ".join(actuals)) )
+			returnStr = ""
+			if linkInvocation:
+				mainStr = "{0} (".format(genLink(invo))
+			else:
+				mainStr = "{0} (".format(invo)
+			actuals = []
+			prev = invo
 
-def genHeap(heap):
-	if re.match('^<<.*>>$', heap):
-		heap = heap.replace("<<", "").replace(">>", "")
-		return "<b>{0}</b>".format(heap)
+		if parts[1] == "-2":
+			returnStr = "{0} = ".format(var)
+		elif parts[1] == "-1":
+			mainStr = "{0} . {1}".format(var, mainStr)
+		else:
+			actuals.append(var)
+	
+	if prev != None:
+		print genElem( "{0}{1}{2})".format(returnStr, mainStr, ", ".join(actuals)) )
+
+
+def getColour(cnt):
+	if cnt == "0":
+		return "Brown"
+	elif cnt == "1":
+		return "LightGreen"
 	else:
-		return heap
+		return "Khaki"
 
-def genVarPointsHead(var, heap):
-	extra = " style=\"color: red;\"" if heap == "@" else ""
-	return "<hr /><h3{1}><a id=\"{0}\">{0}</a></h3>".format(var, extra)
+def genHeader(title):
+	return "\n<h2>{0}</h2>".format(title)
+
+def genGroupHeader(var, colour = "Silver", id = None):
+	id = var if id == None else id
+	return "<h3 style=\"background: {2};\"><a id=\"{0}\">{1}</a></h3><div>".format(id, var, colour)
+
+def genGroupHeader2(var, colour):
+	return "<h4 style=\"background: {1};\">{0}</h4>".format(var, colour)
+
+def genGroupHeaderEnd():
+	return "</div>"
 
 def genElem(element):
 	return "<div>{0}</div>".format(element)
+
+def genLink(value, id = None):
+	id = value if id == None else id
+	return "<a href=\"#{0}\">{1}</a>".format(id, value)
+
+
+HEADER = """<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>{0}</title>
+	<style type="text/css">
+		h2 {{
+			background: Silver;
+			padding: 15px;
+			text-aling: center;
+		}}
+		h3 {{
+			margin-bottom: 0;
+			padding: 10px;
+			border: 1px solid grey;
+		}}
+		h3 + div {{
+			padding: 10px;
+			border: 1px solid grey;
+			border-top: 0;
+		}}
+		h4 {{
+			margin-bottom: 0;
+			padding: 10px;
+			border: 1px solid grey;
+		}}
+	</style>
+</head>
+<body>
+"""
+
+FOOTER = """
+</body>
+</html>
+"""
 
 def genHTML(db, method):
 	doopconn = doop.Connector(db)
@@ -41,264 +120,254 @@ def genHTML(db, method):
 	cl, sig = method[1:-1].split(": ")
 	sig, _ = sig.split("(")
 
+	print HEADER.format(filterHTML(sig))
+
 	res = " ".join( doopconn.modifiers(method) )
 	sig = res + " " + filterHTML(sig) + "("
 
 	res = doopconn.formals(method)
 	res.sort()
-
 	formals = []
 	for elem in res:
 		parts = elem.split(", ")
-		_, var = parts[2].split("/")
-		formals.append( parts[1] + " " + genVar(var) )
+		formal = genLink( cleanVar(parts[2]) )
+		formals.append( "{0} {1}".format(parts[1], formal) )
 	sig += ", ".join( formals ) + ")"
+	print "<h1>[{0}] {1}</h1>".format(cl, sig)
 
-	print "<div id=\"meth\"><h1>[{0}] {1}</h1></div>".format(cl, sig)
-
-	print genPart("locals", "Local Variables")
+	print genGroupHeader("Local Variables")
 	res = doopconn.locals(method)
 	res.sort()
 	for elem in res:
-		parts = elem.split(", ")
-		_, var = parts[1].split("/")
-		print genElem( "{0} {1}".format(parts[0], genVar(var)) )
-	print genPartEnd()
+		cls, var = elem.split(", ")
+		var = genLink( cleanVar(var) )
+		print genElem( "{0} {1}".format(cls, var) )
+	print genGroupHeaderEnd()
 
-	print genPart("allocations", "Allocations")
+	print genGroupHeader("Allocations")
 	res = doopconn.allocations(method)
 	for elem in res:
-		parts = elem.split(", ")
-		_, var = parts[0].split("/")
-		heap = "/".join( parts[1].split("/")[-2:] )
-		print genElem( "{0} = {1}".format(genVar(var), genHeap(heap)) )
-	print genPartEnd()
+		var, heap = elem.split(", ")
+		var = genLink( cleanVar(var) )
+		heap = cleanHeap( "/".join( heap.split("/")[-2:] ) )
+		print genElem( "{0} = {1}".format(var, heap) )
+	print genGroupHeaderEnd()
 
-	print genPart("assigns", "Assigns")
+	print genGroupHeader("Assigns")
 	res = doopconn.assigns(method)
 	for elem in res:
-		parts = elem.split(", ")
-		_, toVar = parts[0].split("/")
-		_, fromVar = parts[1].split("/")
-		print genElem( "{0} = {1}".format(genVar(toVar), genVar(fromVar)) )
-	print genPartEnd()
+		toVar, fromVar = elem.split(", ")
+		toVar = genLink( cleanVar(toVar) )
+		fromVar = genLink( cleanVar(fromVar) )
+		print genElem( "{0} = {1}".format(toVar, fromVar) )
+	print genGroupHeaderEnd()
 
-	print genPart("casts", "Casts")
+	print genGroupHeader("Casts")
 	res = doopconn.casts(method)
 	for elem in res:
 		parts = elem.split(", ")
-		_, toVar = parts[0].split("/")
-		_, fromVar = parts[2].split("/")
-		print genElem( "{0} = ({1}) {2}".format(genVar(toVar), parts[1], genVar(fromVar)) )
-	print genPartEnd()
+		toVar = genLink( cleanVar(toVar) )
+		fromVar = genLink( cleanVar(fromVar) )
+		print genElem( "{0} = ({1}) {2}".format(toVar, parts[1], fromVar) )
+	print genGroupHeaderEnd()
 
-	print genPart("loadFlds", "Load Instance Fields")
+	print genGroupHeader("Load Instance Fields")
 	res = doopconn.loadInstanceFields(method)
 	for elem in res:
 		parts = elem.split(", ")
-		_, toVar = parts[0].split("/")
-		_, baseVar = parts[1].split("/")
-		_, fld = parts[2].split(": ")
-		_, fld = fld.split(" ")
-		fld = fld[:-1]
-		print genElem( "{0} = {1} . {2}".format(genVar(toVar), genVar(baseVar), genVar(fld, "$from$"+baseVar)) )
-	print genPartEnd()
+		toVar = genLink( cleanVar(parts[0]) )
+		baseVar = cleanVar(parts[1])
+		fld = cleanFld(parts[2])
+		fld = genLink( fld, fld+"$from$"+baseVar )
+		print genElem( "{0} = {1} . {2}".format(toVar, genLink(baseVar), fld) )
+	print genGroupHeaderEnd()
 
-	print genPart("storeFlds", "Store Instance Fields")
+	print genGroupHeader("Store Instance Fields")
 	res = doopconn.storeInstanceFields(method)
 	for elem in res:
 		parts = elem.split(", ")
-		_, baseVar = parts[0].split("/")
-		_, fld = parts[1].split(": ")
-		_, fld = fld.split(" ")
-		fld = fld[:-1]
-		_, fromVar = parts[2].split("/")
-		print genElem( "{0} . {1} = {2}".format(genVar(baseVar), genVar(fld, "$from$"+baseVar), genVar(fromVar)) )
-	print genPartEnd()
+		baseVar = cleanVar(parts[0])
+		fld = cleanFld(parts[1])
+		fld = genLink( fld, fld+"$from$"+baseVar )
+		fromVar = genLink( cleanVar(parts[2]) )
+		print genElem( "{0} . {1} = {2}".format(genLink(baseVar), fld, fromVar) )
+	print genGroupHeaderEnd()
 
-	print genPart("loadStaticFlds", "Load Static Fields")
+	print genGroupHeader("Load Static Fields")
 	res = doopconn.loadStaticFields(method)
 	for elem in res:
 		parts = elem.split(", ")
-		_, toVar = parts[0].split("/")
-		_, fld = parts[2].split(": ")
-		_, fld = fld.split(" ")
-		fld = fld[:-1]
-		print genElem( "{0} = {1} . {2}".format(genVar(toVar), parts[1], genVar(fld, "$staticFld$"+parts[1])) )
-	print genPartEnd()
+		toVar = genLink( cleanVar(parts[0]) )
+		fld = cleanFld(parts[2])
+		fld = genLink( fld, fld+"$staticFld$"+parts[1] )
+		print genElem( "{0} = {1} . {2}".format(toVar, parts[1], fld) )
+	print genGroupHeaderEnd()
 
-	print genPart("storeStaticFlds", "Store Static Fields")
+	print genGroupHeader("Store Static Fields")
 	res = doopconn.storeStaticFields(method)
 	for elem in res:
 		parts = elem.split(", ")
-		_, fld = parts[1].split(": ")
-		_, fld = fld.split(" ")
-		fld = fld[:-1]
-		_, fromVar = parts[2].split("/")
-		print genElem( "{0} . {1} = {2}".format(parts[0], genVar(fld, "$staticFld$"+parts[0]), genVar(fromVar)) )
-	print genPartEnd()
+		fld = cleanFld(parts[1])
+		fld = genLink( fld, fld+"$staticFld$"+parts[0] )
+		fromVar = genLink( cleanVar(parts[2]) )
+		print genElem( "{0} . {1} = {2}".format(parts[0], fld, fromVar) )
+	print genGroupHeaderEnd()
 
-	print genPart("loadArr", "Load Arrays")
+	print genGroupHeader("Load Arrays")
 	res = doopconn.loadArrays(method)
 	for elem in res:
-		parts = elem.split(", ")
-		_, toVar = parts[0].split("/")
-		_, fromVar = parts[1].split("/")
-		print genElem( "{0} = {1} [ {2} ]".format(genVar(toVar), genVar(fromVar), genVar("?", fromVar+"$index$")) )
-	print genPartEnd()
+		toVar, fromVar = elem.split(", ")
+		toVar = genLink( cleanVar(toVar) )
+		fromVar = cleanVar(fromVar)
+		print genElem( "{0} = {1} [ {2} ]".format(toVar, genLink(fromVar), genLink("?", fromVar+"$index$")) )
+	print genGroupHeaderEnd()
 
-	print genPart("storeArr", "Store Arrays")
+	print genGroupHeader("Store Arrays")
 	res = doopconn.storeArrays(method)
 	for elem in res:
-		parts = elem.split(", ")
-		_, toVar = parts[0].split("/")
-		_, fromVar = parts[1].split("/")
-		print genElem( "{0} [ {1} ] = {2}".format(genVar(toVar), genVar("?", toVar+"$index$"), genVar(fromVar)) )
-	print genPartEnd()
+		toVar, fromVar = elem.split(", ")
+		toVar = cleanVar(toVar)
+		fromVar = genLink( cleanVar(fromVar) )
+		print genElem( "{0} [ {1} ] = {2}".format(genLink(toVar), genLink("?", toVar+"$index$"), fromVar) )
+	print genGroupHeaderEnd()
 
-	print genPart("returns", "Returns")
+	print genGroupHeader("Returns")
 	res = doopconn.returns(method)
 	for elem in res:
-		_, var = elem.split("/")
-		print genElem( "return {0}".format(genVar(var)) )
-	print genPartEnd()
+		print genElem( "return {0}".format(genLink(cleanVar(elem))) )
+	print genGroupHeaderEnd()
 
-	def printInvocations(res, linkInvocationFlag=False):
-		returnStr = mainStr = ""
-		prev = None
-		for elem in res:
-			parts = elem.split(", ")
-			_, invo = parts[0].split("/", 1)
-			_, var = parts[2].split("/")
-			invo = filterHTML(invo)
-
-			if invo != prev:
-				if prev != None:
-					print genElem( "{0}{1}{2})".format(returnStr, mainStr, ", ".join(actuals)) )
-				returnStr = ""
-				if linkInvocationFlag:
-					mainStr = "{0} (".format( genVar(invo) )
-				else:
-					mainStr = "{0} (".format(invo)
-				actuals = []
-				prev = invo
-
-			if parts[1] == "-2":
-				returnStr = "{0} = ".format(genVar(var))
-			elif parts[1] == "-1":
-				mainStr = "{0} . {1}".format(genVar(var), mainStr)
-			else:
-				actuals.append(genVar(var))
-		
-		if prev != None:
-			print genElem( "{0}{1}{2})".format(returnStr, mainStr, ", ".join(actuals)) )
-
-	print genPart("specialInvo", "Special Method Invocations")
+	print genGroupHeader("Special Method Invocations")
 	res = doopconn.specialInv(method)
 	res.sort()
 	printInvocations(res)
-	print genPartEnd()
+	print genGroupHeaderEnd()
 
-	print genPart("virtualInvo", "Virtual Method Invocations")
+	print genGroupHeader("Virtual Method Invocations")
 	res = doopconn.virtualInv(method)
 	res.sort()
 	printInvocations(res, True)
-	print genPartEnd()
+	print genGroupHeaderEnd()
 
-	print genPart("staticInvo", "Static Method Invocations")
+	print genGroupHeader("Static Method Invocations")
 	res = doopconn.staticInv(method)
 	res.sort()
 	printInvocations(res)
 	res = doopconn.staticInvNoVars(method)
 	for elem in res:
 		_, invo = elem.split("/", 1)
-		invo = filterHTML(invo)
-		print genElem( "{0} ()".format(invo) )
-	print genPartEnd()
+		print genElem( "{0} ()".format(filterHTML(invo)) )
+	print genGroupHeaderEnd()
 
 
-	print "<hr /><hr />"
-	print genPart("results", "Results")
+	print "<div style=\"margin-top: 40px; border: 5px dashed grey;\"></div>"
+	print genHeader("Variables")
+	counts = dict(elem.split(", ") for elem in doopconn.varPointsToCounts(method))
 	res = doopconn.varPointsTo(method)
 	res.sort()
-	res = res + doopconn.nullVars(method)
 	prev = None
 	for elem in res:
 		var, heap = elem.split(", ")
-		_, var = var.split("/")
-		heap = filterHTML(heap)
+		counter = counts[var]
+		colour = getColour(counter)
+		var = cleanVar(var)
+		heap = cleanHeap(heap)
 		if prev != var:
-			print genVarPointsHead(var, heap)
+			if prev != None: print genGroupHeaderEnd()
+			print genGroupHeader(var, colour)
 			prev = var
-		print genElem("" if heap == "@" else heap)
-	print genPartEnd()
+		if counter != "0": print genElem(heap)
+	if res: print genGroupHeaderEnd()
 
-	print genPart("callGraph", "Call Graph")
+	print genHeader("Fields")
+
+	g1 = lambda x, y: "{0}, {1}".format(x, y)
+	g2 = lambda parts: ( g1(parts[0], parts[1]), parts[2] )
+	counts = dict( g2(elem.split(", ")) for elem in doopconn.fldPointsToCounts(method) )
+	res = doopconn.fldPointsTo(method)
+	res.sort()
+	prev = None
+	prevHeap = None
+	for elem in res:
+		parts = elem.split(", ")
+		fld = cleanFld(parts[0])
+		base = cleanVar(parts[1])
+		id = "{0}$from${1}".format(fld, base)
+		counter = counts[ g1(parts[2], parts[0]) ]
+		colour = getColour(counter)
+		if prev != id:
+			if prev != None: print genGroupHeaderEnd()
+			print genGroupHeader(base+"."+fld, id = id)
+			prev = id
+			prevHeap = None
+		if prevHeap != parts[2]:
+			print genGroupHeader2(cleanHeap(parts[2]), colour)
+			prevHeap = parts[2]
+		if counter != "0": print genElem( cleanHeap(parts[3]) )
+	if res: print genGroupHeaderEnd()
+
+	counts = dict(elem.split(", ") for elem in doopconn.staticFldPointsToCounts(method))
+	res = doopconn.staticFldPointsTo(method)
+	res.sort()
+	prev = None
+	for elem in res:
+		parts = elem.split(", ")
+		counter = counts[parts[1]]
+		colour = getColour(counter)
+		fld = cleanFld(parts[1])
+		id = "{0}$staticFld${1}".format(fld, parts[0])
+		if prev != id:
+			if prev != None: print genGroupHeaderEnd()
+			print genGroupHeader(parts[0]+"."+fld, colour, id)
+			prev = id
+		if counter != "0": print genElem( cleanHeap(parts[2]) )
+	if res: print genGroupHeaderEnd()
+	
+	print genHeader("Arrays")
+	counts = dict(elem.split(", ") for elem in doopconn.arrayPointsToCounts(method))
+	res = doopconn.arrayPointsTo(method)
+	res.sort()
+	prev = None
+	for elem in res:
+		parts = elem.split(", ")
+		_, base = parts[0].split("/")
+		id = "{0}$index$".format(base)
+		counter = counts[parts[1]]
+		colour = getColour(counter)
+		if prev != id:
+			if prev != None: print genGroupHeaderEnd()
+			print genGroupHeader(base+" [ ? ]", id = id)
+			prev = id
+		if prevHeap != parts[1]:
+			print genGroupHeader2(cleanHeap(parts[1]), colour)
+			prevHeap = parts[2]
+		if counter != "0": print genElem( cleanHeap(parts[2]) )
+	if res: print genGroupHeaderEnd()
+
+	print genHeader("Virtual Call Graph")
+	counts = dict(elem.split(", ") for elem in doopconn.virtualCallGraphCounts(method))
 	res = doopconn.virtualCallGraph(method)
 	res.sort()
 	prev = None
 	for elem in res:
 		invo, meth = elem.split(", ")
+		counter = counts[invo]
+		colour = getColour(counter)
 		_, invo = invo.split("/", 1)
-		meth = meth.replace("<", "").replace(">", "")
 		if prev != invo:
-			print genVarPointsHead(invo, None)
+			if prev != None: print genGroupHeaderEnd()
+			print genGroupHeader(invo, colour)
 			prev = invo
-		print genElem( meth )
-	print genPartEnd()
+		if counter != "0": print genElem( cleanHeap(meth) )
+	if res: print genGroupHeaderEnd()
 
-	print genPart("fldPointsTo", "Field Points To")
-	res = doopconn.fldPointsTo(method)
-	res.sort()
-	res = res + doopconn.nullFldPointsTo(method)
-	prev = None
-	for elem in res:
-		parts = elem.split(", ")
-		fld = cleanFld(parts[0])
-		_, base = parts[1].split("/")
-		id = "{0}$from${1}".format(fld, base)
-		if prev != id:
-			print genVarPointsHead(id, parts[3])
-			prev = id
-		print genElem( "{0} ~~(fld)~~> {1}".format( filterHTML(parts[2]), filterHTML(parts[3]) ) )
-	print genPartEnd()
-
-	print genPart("staticFldPointsTo", "Static Field Points To")
-	res = doopconn.staticFldPointsTo(method)
-	res.sort()
-	res = res + doopconn.nullStaticFldPointsTo(method)
-	prev = None
-	for elem in res:
-		parts = elem.split(", ")
-		fld = cleanFld(parts[1])
-		id = "{0}$staticFld${1}".format(fld, parts[0])
-		if prev != id:
-			print genVarPointsHead(id, parts[2])
-			prev = id
-		print genElem( filterHTML(parts[2]) )
-	print genPartEnd()
-	
-	print genPart("array", "Array Index")
-	res = doopconn.arrayPointsTo(method)
-	res.sort()
-	res = res + doopconn.nullArrayPointsTo(method)
-	prev = None
-	for elem in res:
-		parts = elem.split(", ")
-		_, base = parts[0].split("/")
-		id = "?{0}$index$".format(base)
-		if prev != id:
-			print genVarPointsHead(id, parts[2])
-			prev = id
-		print genElem( "{0} ~~[index]~~> {1}".format( filterHTML(parts[1]), filterHTML(parts[2]) ) )
-	print genPartEnd()
+	print FOOTER
 
 
 def main(cmd):
 	if isinstance(cmd, basestring):
 		cmd = cmd.split()
 
-    # Command-line argument parsing
 	parser = argparse.ArgumentParser(
 		usage = 'toHTML.py [-h] workspace method')
 

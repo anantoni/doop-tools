@@ -13,7 +13,7 @@ _(type, local) <-
 	meth = "{0}", _localVar(local, meth), Var:Type[local] = type.
 
 _localVar(local, meth) <-
-	MethodSignatureRef(meth), Var:DeclaringMethod(local, meth),
+	meth = "{0}", Var:DeclaringMethod(local, meth),
 	!FormalParam[_, meth] = local, !ThisVar[meth] = local.
 """
 
@@ -120,23 +120,26 @@ _(var) <-
 """
 
 
+
 VAR_POINTS_TO = """
 _(var, heap) <-
-	meth = "{0}", MethodSignatureRef(meth),
-	Var:DeclaringMethod(var, meth), VarPointsTo(_, heap, _, var).
+	meth = "{0}", Var:DeclaringMethod(var, meth), VarPointsTo(_, heap, _, var).
+
+_(var, dummy) <-
+	meth = "{0}", Var:DeclaringMethod(var, meth), !VarPointsTo(_, _, _, var),
+	MainMethodArgsArray(dummy).
 """
 
-NULL_VARS = """
-_(var, "@") <-
-	meth = "{0}", MethodSignatureRef(meth),
-	Var:DeclaringMethod(var, meth), !VarPointsTo(_, _, _, var).
-"""
+VAR_POINTS_TO_COUNTS = """
+_(var, 0) <-
+	meth = "{0}", Var:DeclaringMethod(var, meth), !VarPointsTo(_, _, _, var).
 
-VIRTUAL_CALL_GRAPH = """
-_(invo, toMeth) <-
-	meth = "{0}",
-	VirtualMethodInvocation:In(invo, meth), 
-	CallGraphEdge(_, invo, _, toMeth).
+_(var, cnt) <- _c[var] = cnt.
+
+_t(var, heap) <-
+	meth = "{0}", Var:DeclaringMethod(var, meth), VarPointsTo(_, heap, _, var).
+
+_c[var] = cnt <- agg<<cnt = count()>> _t(var, _).
 """
 
 FLD_POINTS_TO = """
@@ -145,14 +148,31 @@ _(fld, base, baseHeap, heap) <-
 	(LoadInstanceField(base, fld, _, meth) ; StoreInstanceField(_, base, fld, meth)),
 	VarPointsTo(_, baseHeap, _, base),
 	InstanceFieldPointsTo(_, heap, fld, _, baseHeap).
+
+_(fld, base, baseHeap, dummy) <-
+	meth = "{0}",
+	(LoadInstanceField(base, fld, _, meth) ; StoreInstanceField(_, base, fld, meth)),
+	VarPointsTo(_, baseHeap, _, base),
+	!InstanceFieldPointsTo(_, _, fld, _, baseHeap),
+	MainMethodArgsArray(dummy).
 """
 
-NULL_FLD_POINTS_TO = """
-_(fld, base, baseHeap, "@") <-
+FLD_POINTS_TO_COUNTS = """
+_(baseHeap, fld, 0) <-
 	meth = "{0}",
 	(LoadInstanceField(base, fld, _, meth) ; StoreInstanceField(_, base, fld, meth)),
 	VarPointsTo(_, baseHeap, _, base),
 	!InstanceFieldPointsTo(_, _, fld, _, baseHeap).
+
+_(baseHeap, fld, cnt) <- _c[baseHeap, fld] = cnt.
+
+_t(baseHeap, fld, heap) <-
+	meth = "{0}",
+	(LoadInstanceField(base, fld, _, meth) ; StoreInstanceField(_, base, fld, meth)),
+	VarPointsTo(_, baseHeap, _, base),
+	InstanceFieldPointsTo(_, heap, fld, _, baseHeap).
+
+_c[baseHeap, fld] = cnt <- agg<<cnt = count()>> _t(baseHeap, fld, _).
 """
 
 STATIC_FLD_POINTS_TO = """
@@ -160,13 +180,28 @@ _(cls, fld, heap) <-
 	meth = "{0}",
 	(LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
 	StaticFieldPointsTo(_, heap, fld), Field:DeclaringClass[fld] = cls.
-"""
 
-NULL_STATIC_FLD_POINTS_TO = """
-_(cls, fld, "@") <-
+_(cls, fld, dummy) <-
 	meth = "{0}",
 	(LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
-	!StaticFieldPointsTo(_, _, fld), Field:DeclaringClass[fld] = cls.
+	!StaticFieldPointsTo(_, _, fld), Field:DeclaringClass[fld] = cls,
+	MainMethodArgsArray(dummy).
+"""
+
+STATIC_FLD_POINTS_TO_COUNTS = """
+_(fld, 0) <-
+	meth = "{0}",
+	(LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
+	!StaticFieldPointsTo(_, _, fld).
+
+_(fld, cnt) <- _c[fld] = cnt.
+
+_t(fld, heap) <-
+	meth = "{0}",
+	(LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
+	StaticFieldPointsTo(_, heap, fld).
+
+_c[fld] = cnt <- agg<<cnt = count()>> _t(fld, _).
 """
 
 ARRAY_POINTS_TO = """
@@ -175,12 +210,53 @@ _(base, baseHeap, heap) <-
 	(LoadArrayIndex(base, _, meth) ; StoreArrayIndex(_, base, meth)),
 	VarPointsTo(_, baseHeap, _, base),
 	ArrayIndexPointsTo(_, heap, _, baseHeap).
+
+_(base, baseHeap, dummy) <-
+	meth = "{0}",
+	(LoadArrayIndex(base, _, meth) ; StoreArrayIndex(_, base, meth)),
+	VarPointsTo(_, baseHeap, _, base),
+	!ArrayIndexPointsTo(_, _, _, baseHeap),
+	MainMethodArgsArray(dummy).
 """
 
-NULL_ARRAY_POINTS_TO = """
-_(base, baseHeap, "@") <-
+ARRAY_POINTS_TO_COUNTS = """
+_(baseHeap, 0) <-
 	meth = "{0}",
 	(LoadArrayIndex(base, _, meth) ; StoreArrayIndex(_, base, meth)),
 	VarPointsTo(_, baseHeap, _, base),
 	!ArrayIndexPointsTo(_, _, _, baseHeap).
+
+_(baseHeap, cnt) <- _c[baseHeap] = cnt.
+
+_t(baseHeap, heap) <-
+	meth = "{0}",
+	(LoadArrayIndex(base, _, meth) ; StoreArrayIndex(_, base, meth)),
+	VarPointsTo(_, baseHeap, _, base),
+	ArrayIndexPointsTo(_, heap, _, baseHeap).
+
+_c[baseHeap] = cnt <- agg<<cnt = count()>> _t(baseHeap, _).
+"""
+
+VIRTUAL_CALL_GRAPH = """
+_(invo, toMeth) <-
+	meth = "{0}", VirtualMethodInvocation:In(invo, meth), 
+	CallGraphEdge(_, invo, _, toMeth).
+
+_(invo, dummy) <-
+	meth = "{0}", VirtualMethodInvocation:In(invo, meth), 
+	!CallGraphEdge(_, invo, _, _), MainMethodDeclaration(dummy).
+"""
+
+VIRTUAL_CALL_GRAPH_COUNTS = """
+_(invo, 0) <-
+	meth = "{0}", VirtualMethodInvocation:In(invo, meth), 
+	!CallGraphEdge(_, invo, _, _).
+
+_(invo, cnt) <- _c[invo] = cnt.
+
+_t(invo, toMeth) <-
+	meth = "{0}", VirtualMethodInvocation:In(invo, meth), 
+	CallGraphEdge(_, invo, _, toMeth).
+
+_c[invo] = cnt <- agg<<cnt = count()>> _t(invo, _).
 """
