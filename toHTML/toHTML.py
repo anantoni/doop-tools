@@ -60,12 +60,12 @@ def getColour(cnt):
 def genHeader(title):
 	return "\n<h2>{0}</h2>".format(title)
 
-def genGroupHeader(var, colour = "Silver", id = None):
-	id = var if id == None else id
-	return "<h3 style=\"background: {2};\"><a id=\"{0}\">{1}</a></h3><div>".format(id, var, colour)
+def genGroupHeader(value, colour = "Silver", id = None):
+	id = value if id == None else id
+	return "<h3 style=\"background: {2};\"><a id=\"{0}\">{1}</a></h3><div>".format(id, value, colour)
 
-def genGroupHeader2(var, colour):
-	return "<h4 style=\"background: {1};\">{0}</h4>".format(var, colour)
+def genGroupHeader2(value, colour):
+	return "<h4 style=\"background: {1};\">{0}</h4><div>".format(value, colour)
 
 def genGroupHeaderEnd():
 	return "</div>"
@@ -76,6 +76,9 @@ def genElem(element):
 def genLink(value, id = None):
 	id = value if id == None else id
 	return "<a href=\"#{0}\">{1}</a>".format(id, value)
+
+def genComment(value):
+	return "<span class=\"comment\">// {0}</span>".format(value)
 
 
 HEADER = """<!DOCTYPE html>
@@ -94,15 +97,20 @@ HEADER = """<!DOCTYPE html>
 			padding: 10px;
 			border: 1px solid grey;
 		}}
-		h3 + div {{
-			padding: 10px;
-			border: 1px solid grey;
-			border-top: 0;
-		}}
 		h4 {{
 			margin-bottom: 0;
 			padding: 10px;
 			border: 1px solid grey;
+		}}
+		h3 + div, h4 + div {{
+			padding: 10px;
+			border: 1px solid grey;
+			border-top: 0;
+		}}
+		.comment {{
+			margin-left: 20px;
+			color: Grey;
+			font-style: italic;
 		}}
 	</style>
 </head>
@@ -171,6 +179,21 @@ def genHTML(db, method):
 		print genElem( "{0} = ({1}) {2}".format(toVar, parts[1], fromVar) )
 	print genGroupHeaderEnd()
 
+	res = doopconn.fldModifiers(method)
+	res.sort()
+	modifiers = {}
+	t = []
+	prev = None
+	for elem in res:
+		fld, mod = elem.split(", ")
+		if prev != fld:
+			if prev != None: modifiers[prev] = " ".join( t )
+			t = []
+			prev = fld
+		t.append(mod)
+	if prev != None: modifiers[prev] = " ".join( t )
+	getMods = lambda x: genComment(modifiers[x]) if x in modifiers else ""
+
 	print genGroupHeader("Load Instance Fields")
 	res = doopconn.loadInstanceFields(method)
 	for elem in res:
@@ -179,7 +202,7 @@ def genHTML(db, method):
 		baseVar = cleanVar(parts[1])
 		fld = cleanFld(parts[2])
 		fld = genLink( fld, fld+"$from$"+baseVar )
-		print genElem( "{0} = {1} . {2}".format(toVar, genLink(baseVar), fld) )
+		print genElem( "{0} = {1} . {2} {3}".format(toVar, genLink(baseVar), fld, getMods(parts[2])) )
 	print genGroupHeaderEnd()
 
 	print genGroupHeader("Store Instance Fields")
@@ -190,7 +213,7 @@ def genHTML(db, method):
 		fld = cleanFld(parts[1])
 		fld = genLink( fld, fld+"$from$"+baseVar )
 		fromVar = genLink( cleanVar(parts[2]) )
-		print genElem( "{0} . {1} = {2}".format(genLink(baseVar), fld, fromVar) )
+		print genElem( "{0} . {1} = {2} {3}".format(genLink(baseVar), fld, fromVar, getMods(parts[1])) )
 	print genGroupHeaderEnd()
 
 	print genGroupHeader("Load Static Fields")
@@ -200,7 +223,7 @@ def genHTML(db, method):
 		toVar = genLink( cleanVar(parts[0]) )
 		fld = cleanFld(parts[2])
 		fld = genLink( fld, fld+"$staticFld$"+parts[1] )
-		print genElem( "{0} = {1} . {2}".format(toVar, parts[1], fld) )
+		print genElem( "{0} = {1} . {2} {3}".format(toVar, parts[1], fld, getMods(parts[2])) )
 	print genGroupHeaderEnd()
 
 	print genGroupHeader("Store Static Fields")
@@ -210,7 +233,7 @@ def genHTML(db, method):
 		fld = cleanFld(parts[1])
 		fld = genLink( fld, fld+"$staticFld$"+parts[0] )
 		fromVar = genLink( cleanVar(parts[2]) )
-		print genElem( "{0} . {1} = {2}".format(parts[0], fld, fromVar) )
+		print genElem( "{0} . {1} = {2} {3}".format(parts[0], fld, fromVar, getMods(parts[1])) )
 	print genGroupHeaderEnd()
 
 	print genGroupHeader("Load Arrays")
@@ -301,10 +324,11 @@ def genHTML(db, method):
 			prev = id
 			prevHeap = None
 		if prevHeap != parts[2]:
+			if prevHeap != None: print genGroupHeaderEnd()
 			print genGroupHeader2(cleanHeap(parts[2]), colour)
 			prevHeap = parts[2]
 		if counter != "0": print genElem( cleanHeap(parts[3]) )
-	if res: print genGroupHeaderEnd()
+	if res: print genGroupHeaderEnd() + genGroupHeaderEnd()
 
 	counts = dict(elem.split(", ") for elem in doopconn.staticFldPointsToCounts(method))
 	res = doopconn.staticFldPointsTo(method)
@@ -328,6 +352,7 @@ def genHTML(db, method):
 	res = doopconn.arrayPointsTo(method)
 	res.sort()
 	prev = None
+	prevHeap = None
 	for elem in res:
 		parts = elem.split(", ")
 		_, base = parts[0].split("/")
@@ -338,11 +363,13 @@ def genHTML(db, method):
 			if prev != None: print genGroupHeaderEnd()
 			print genGroupHeader(base+" [ ? ]", id = id)
 			prev = id
+			prevHeap = None
 		if prevHeap != parts[1]:
+			if prevHeap != None: print genGroupHeaderEnd()
 			print genGroupHeader2(cleanHeap(parts[1]), colour)
-			prevHeap = parts[2]
+			prevHeap = parts[1]
 		if counter != "0": print genElem( cleanHeap(parts[2]) )
-	if res: print genGroupHeaderEnd()
+	if res: print genGroupHeaderEnd() + genGroupHeaderEnd()
 
 	print genHeader("Virtual Call Graph")
 	counts = dict(elem.split(", ") for elem in doopconn.virtualCallGraphCounts(method))

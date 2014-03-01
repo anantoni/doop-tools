@@ -27,6 +27,9 @@ class Connector:
 	def casts(self, method):
 		return self.__query(CASTS.format(method))
 
+	def fldModifiers(self, method):
+		return self.__query(FLD_MODIFIERS.format(method))
+
 	def loadInstanceFields(self, method):
 		return self.__query(LOAD_INSTANCE_FIELDS.format(method))
 

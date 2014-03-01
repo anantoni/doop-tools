@@ -32,6 +32,14 @@ _(to, type, from) <-
 	meth = "{0}", AssignCast(type, from, to, meth).
 """
 
+FLD_MODIFIERS = """
+_(fld, mod) <-
+	meth = "{0}",
+	(LoadInstanceField(_, fld, _, meth) ; StoreInstanceField(_, _, fld, meth) ;
+	 LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
+	FieldModifier(mod, fld).
+"""
+
 LOAD_INSTANCE_FIELDS = """
 _(to, base, fld) <-
 	meth = "{0}", LoadInstanceField(base, fld, to, meth).
