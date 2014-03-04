@@ -48,24 +48,27 @@ def printInvocations(res, linkInvocation=False):
 	if prev != None:
 		print genElem( "{0}{1}{2})".format(returnStr, mainStr, ", ".join(actuals)) )
 
-
-def getColour(cnt):
-	if cnt == "0":
-		return "Brown"
-	elif cnt == "1":
-		return "LightGreen"
+def getColourClass(cnt):
+	if int(cnt) == 0:
+		return "emptyPTSet"
+	elif int(cnt) == 1:
+		return "singlePTSet"
+	elif int(cnt) >= 2:
+		return "multiplePTSet"
+	elif int(cnt) <= -2:
+		return "multiplePTSet singleTypePTSet"
 	else:
-		return "Khaki"
+		return "neutral"
 
 def genHeader(title):
 	return "\n<h2>{0}</h2>".format(title)
 
-def genGroupHeader(value, colour = "Silver", id = None):
+def genGroupHeader(value, colourClass = "neutral", id = None):
 	id = value if id == None else id
-	return "<h3 style=\"background: {2};\"><a id=\"{0}\">{1}</a></h3><div>".format(id, value, colour)
+	return "<h3 class=\"{2}\"><a id=\"{0}\">{1}</a></h3><div>".format(id, value, colourClass)
 
-def genGroupHeader2(value, colour):
-	return "<h4 style=\"background: {1};\">{0}</h4><div>".format(value, colour)
+def genGroupHeader2(value, colourClass):
+	return "<h4 class=\"{1}\">{0}</h4><div>".format(value, colourClass)
 
 def genGroupHeaderEnd():
 	return "</div>"
@@ -111,6 +114,21 @@ HEADER = """<!DOCTYPE html>
 			margin-left: 20px;
 			color: Grey;
 			font-style: italic;
+		}}
+		.emptyPTSet {{
+			background: Brown;
+		}}
+		.singlePTSet {{
+			background: LightGreen;
+		}}
+		.multiplePTSet {{
+			background: Khaki;
+		}}
+		.singleTypePTSet {{
+			background-image: repeating-linear-gradient(45deg, transparent, transparent 50px, LightGreen 50px, LightGreen 100px);
+		}}
+		.neutral {{
+			background: Silver;
 		}}
 	</style>
 </head>
@@ -292,12 +310,12 @@ def genHTML(db, method):
 	for elem in res:
 		var, heap = elem.split(", ")
 		counter = counts[var]
-		colour = getColour(counter)
+		colourClass = getColourClass(counter)
 		var = cleanVar(var)
 		heap = cleanHeap(heap)
 		if prev != var:
 			if prev != None: print genGroupHeaderEnd()
-			print genGroupHeader(var, colour)
+			print genGroupHeader(var, colourClass)
 			prev = var
 		if counter != "0": print genElem(heap)
 	if res: print genGroupHeaderEnd()
@@ -317,7 +335,7 @@ def genHTML(db, method):
 		base = cleanVar(parts[1])
 		id = "{0}$from${1}".format(fld, base)
 		counter = counts[ g1(parts[2], parts[0]) ]
-		colour = getColour(counter)
+		colourClass = getColourClass(counter)
 		if prev != id:
 			if prev != None: print genGroupHeaderEnd()
 			print genGroupHeader(base+"."+fld, id = id)
@@ -325,7 +343,7 @@ def genHTML(db, method):
 			prevHeap = None
 		if prevHeap != parts[2]:
 			if prevHeap != None: print genGroupHeaderEnd()
-			print genGroupHeader2(cleanHeap(parts[2]), colour)
+			print genGroupHeader2(cleanHeap(parts[2]), colourClass)
 			prevHeap = parts[2]
 		if counter != "0": print genElem( cleanHeap(parts[3]) )
 	if res: print genGroupHeaderEnd() + genGroupHeaderEnd()
@@ -337,12 +355,12 @@ def genHTML(db, method):
 	for elem in res:
 		parts = elem.split(", ")
 		counter = counts[parts[1]]
-		colour = getColour(counter)
+		colourClass = getColourClass(counter)
 		fld = cleanFld(parts[1])
 		id = "{0}$staticFld${1}".format(fld, parts[0])
 		if prev != id:
 			if prev != None: print genGroupHeaderEnd()
-			print genGroupHeader(parts[0]+"."+fld, colour, id)
+			print genGroupHeader(parts[0]+"."+fld, colourClass, id)
 			prev = id
 		if counter != "0": print genElem( cleanHeap(parts[2]) )
 	if res: print genGroupHeaderEnd()
@@ -358,7 +376,7 @@ def genHTML(db, method):
 		_, base = parts[0].split("/")
 		id = "{0}$index$".format(base)
 		counter = counts[parts[1]]
-		colour = getColour(counter)
+		colourClass = getColourClass(counter)
 		if prev != id:
 			if prev != None: print genGroupHeaderEnd()
 			print genGroupHeader(base+" [ ? ]", id = id)
@@ -366,7 +384,7 @@ def genHTML(db, method):
 			prevHeap = None
 		if prevHeap != parts[1]:
 			if prevHeap != None: print genGroupHeaderEnd()
-			print genGroupHeader2(cleanHeap(parts[1]), colour)
+			print genGroupHeader2(cleanHeap(parts[1]), colourClass)
 			prevHeap = parts[1]
 		if counter != "0": print genElem( cleanHeap(parts[2]) )
 	if res: print genGroupHeaderEnd() + genGroupHeaderEnd()
@@ -379,11 +397,11 @@ def genHTML(db, method):
 	for elem in res:
 		invo, meth = elem.split(", ")
 		counter = counts[invo]
-		colour = getColour(counter)
+		colourClass = getColourClass(counter)
 		_, invo = invo.split("/", 1)
 		if prev != invo:
 			if prev != None: print genGroupHeaderEnd()
-			print genGroupHeader(invo, colour)
+			print genGroupHeader(invo, colourClass)
 			prev = invo
 		if counter != "0": print genElem( cleanHeap(meth) )
 	if res: print genGroupHeaderEnd()

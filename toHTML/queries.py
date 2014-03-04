@@ -150,6 +150,25 @@ _t(var, heap) <-
 _c[var] = cnt <- agg<<cnt = count()>> _t(var, _).
 """
 
+"""VAR_POINTS_TO_COUNTS =
+_(var, 0) <-
+	meth = "{0}", Var:DeclaringMethod(var, meth), !VarPointsTo(_, _, _, var).
+
+_(var, cnt) <- _c[var] = cnt, cnt = 1.
+_(var, cnt) <- _c[var] = cnt, cnt >= 2, _tc[var] >= 2.
+_(var, cnt2) <- _c[var] = cnt, cnt >= 2, _tc[var] = 1, cnt2 = -1 * cnt.
+
+_t(var, heap) <-
+	meth = "{0}", Var:DeclaringMethod(var, meth), VarPointsTo(_, heap, _, var).
+
+_c[var] = cnt <- agg<<cnt = count()>> _t(var, _).
+
+_tt(var, type) <-
+	meth = "{0}", Var:DeclaringMethod(var, meth), VarPointsTo(_, heap, _, var), HeapAllocation:Type[heap] = type.
+
+_tc[var] = cnt <- agg<<cnt = count()>> _tt(var, _).
+"""
+
 FLD_POINTS_TO = """
 _(fld, base, baseHeap, heap) <-
 	meth = "{0}",
