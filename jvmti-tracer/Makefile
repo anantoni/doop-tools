@@ -1,27 +1,28 @@
-CC = gcc
-JC = javac
-LD_FLAGS = -fPIC -I${JAVA_HOME}/include -I${JAVA_HOME}/include/linux 
+CC      := gcc
+JAVAC   := javac
+LDFLAGS := -fPIC -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux 
 
-SRCDIR  = ./src/
-DESTDIR = ./build/
-TARGETS = $(addprefix $(DESTDIR), Trace2GXL.class tracer.so)
+SRCDIR  := ./src
+DESTDIR := ./build
+TARGETS := $(addprefix $(DESTDIR)/, Trace2GXL.class tracer.so)
 
 PROBE = ../probe/probe.jar
 
 all: $(TARGETS)
 
-$(DESTDIR)%.so: $(SRCDIR)%.c	
-	$(CC) $(LD_FLAGS) -shared -o $@ $<
+vpath %.c    $(SRCDIR)
+vpath %.java $(SRCDIR)
 
-$(DESTDIR)%.class: $(SRCDIR)%.java
-	$(JC) -cp $(PROBE) -d $(DESTDIR) $<
+$(DESTDIR)/%.so: %.c | $(DESTDIR)
+	$(CC) $(LDFLAGS) -shared -o $@ $<
+
+$(DESTDIR)/%.class: %.java | $(DESTDIR)
+	$(JAVAC) -cp $(PROBE) -d $(DESTDIR)/ $<
 
 clean:
-	rm -rf $(DESTDIR)
+	rm -rf $(DESTDIR)/
 
-installdirs:
-	mkdir -p $(DESTDIR)
+$(DESTDIR):
+	mkdir -p $@
 
-$(TARGETS): installdirs
-
-.PHONY: all clean installdirs
+.PHONY: all clean
