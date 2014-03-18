@@ -1,5 +1,10 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <jvmti.h>
 
 static FILE* out;
@@ -106,16 +111,23 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved) 
     jvmtiCapabilities capabilities;
     jvmtiError error;
 
-    if (options == NULL) {
-        fprintf(stderr, "This agent requires the following option: <file>.\n\n"
-            "For instance, the following command will cause the agent output write the trace into <file>:\n"
-            "java -javapath:./tracer.so=<file>\n\n");
-        return JNI_ERR;
-    }
+    /* Switch stdout with new file descriptor that writes to terminal */
 
-    out = fopen(options, "w");
+    int stdout_copy = dup(1);
+    int ttyfd = open("/dev/tty", O_RDWR);
+
+    if (dup2(ttyfd, 1) == -1)
+        return JNI_ERR;
+
+    if (dup2(stdout_copy, ttyfd) == -1)
+        return JNI_ERR;
+
+    /* Make stream from file descriptor, to take advantage of buffering */
+
+    out = fdopen(ttyfd, "w");
+
     if (out == NULL) {
-        fprintf(stderr, "Couldn't open file %s for writing", options);
+        fprintf(stderr, "Couldn't make stream from file descriptor %d", ttyfd);
         return JNI_ERR;
     }
 
