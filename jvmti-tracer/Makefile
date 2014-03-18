@@ -14,7 +14,7 @@ vpath %.c    $(SRCDIR)
 vpath %.java $(SRCDIR)
 
 $(DESTDIR)/%.so: %.c | $(DESTDIR)
-	$(CC) $(LDFLAGS) -shared -o $@ $<
+	$(CC) $(LDFLAGS) -O2 -shared -o $@ $<
 
 $(DESTDIR)/%.class: %.java | $(DESTDIR)
 	$(JAVAC) -cp $(PROBE) -d $(DESTDIR)/ $<
