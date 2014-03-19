@@ -1,0 +1,60 @@
+#!/bin/bash
+
+
+if [[ -z $DOOP_HOME ]]; then
+    export DOOP_HOME=`dirname $( readlink -f $( which doop ) )`
+fi
+
+if ! hash doop 2>/dev/null; then
+    echo "error: doop command is not available" >&2
+    exit 1
+fi
+
+set -e # Exit immediately if a command exits with a nonzero exit status
+set -u # Treat unset variables as an error
+export LC_ALL=en_US.UTF-8
+
+while read settings; do
+    echo "Testing with Doop options: ${settings}"
+    for benchmark in antlr bloat chart hsqldb jython luindex lusearch pmd xalan
+    do
+        suffix="-default"
+
+        if [[ -n $settings ]]; then
+            suffix=""
+            for option in $settings; do
+                option="${option/--enable-/-f}"
+                option="${option/--disable-/-fno-}"
+                suffix="${suffix}${option%-analysis}"
+            done
+        fi
+
+        workspace="analyses/${benchmark}/${benchmark}${suffix}"
+        trace="traces/$benchmark-large.gxl"
+        diff="${workspace/analyses/diffs}.txt"
+        log="${benchmark}${suffix}.log"
+        jars=`echo $DOOP_HOME/jars/dacapo/$benchmark*.jar`
+
+        echo "Running benchmark ${benchmark} (stored into $workspace)"
+
+        set +e
+        doop $settings context-insensitive $DOOP_HOME/jars/dacapo/$benchmark.jar | tee $log
+        set -e
+
+        # Check exit status
+        if [[ $? != 0 ]]; then
+            echo "Benchmark ${benchmark} timed out for $settings" >&2
+            continue
+        fi
+
+        mkdir -p $(dirname $workspace)
+        ln -s `readlink -f $DOOP_HOME/last-analysis` $workspace
+        mkdir -p $(dirname $diff)
+        ../tracediff.py $workspace $trace -cp "${jars// /:}" -a2a -a2l -l2a > $diff
+    done
+done <<'EOF'
+
+--disable-reflection-substring-analysis
+--enable-use-based-reflection-analysis
+--disable-reflection-substring-analysis --enable-use-based-reflection-analysis
+EOF
