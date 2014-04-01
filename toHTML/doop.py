@@ -99,3 +99,7 @@ class Connector:
 	def virtualCallGraphCounts(self, method):
 		return self.__query(VIRTUAL_CALL_GRAPH_COUNTS.format(method), toprint = "_")
 
+
+	def stringConstants(self):
+		return self.__query(STRING_CONSTANTS)
+

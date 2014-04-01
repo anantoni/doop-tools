@@ -12,8 +12,11 @@ def cleanFld(fld):
 	_, fld = fld.split(" ")
 	return fld[:-1]
 
-def cleanHeap(heap):
-	return heap.replace("<", "").replace(">", "")
+def cleanHeap(heap, stringConstants):
+	constant = True if heap in stringConstants else False
+	heap = heap.replace("<", "").replace(">", "")
+	if constant: return "<b>\"{0}\"</b>".format(heap)
+	else: return heap
 
 def filterHTML(value):
 	return value.replace("<", "&lt;").replace(">", "&gt;")
@@ -143,6 +146,8 @@ FOOTER = """
 def genHTML(db, method):
 	doopconn = doop.Connector(db)
 
+	stringConstants = doopconn.stringConstants()
+
 	cl, sig = method[1:-1].split(": ")
 	sig, _ = sig.split("(")
 
@@ -173,9 +178,9 @@ def genHTML(db, method):
 	print genGroupHeader("Allocations")
 	res = doopconn.allocations(method)
 	for elem in res:
-		var, heap = elem.split(", ")
+		var, heap = elem.split(", ", 1)
 		var = genLink( cleanVar(var) )
-		heap = cleanHeap( "/".join( heap.split("/")[-2:] ) )
+		heap = cleanHeap( "/".join( heap.split("/")[-2:] ), stringConstants )
 		print genElem( "{0} = {1}".format(var, heap) )
 	print genGroupHeaderEnd()
 
@@ -312,7 +317,7 @@ def genHTML(db, method):
 		counter = counts[var]
 		colourClass = getColourClass(counter)
 		var = cleanVar(var)
-		heap = cleanHeap(heap)
+		heap = cleanHeap(heap, stringConstants)
 		if prev != var:
 			if prev != None: print genGroupHeaderEnd()
 			print genGroupHeader(var, colourClass)
@@ -343,9 +348,9 @@ def genHTML(db, method):
 			prevHeap = None
 		if prevHeap != parts[2]:
 			if prevHeap != None: print genGroupHeaderEnd()
-			print genGroupHeader2(cleanHeap(parts[2]), colourClass)
+			print genGroupHeader2(cleanHeap(parts[2], stringConstants), colourClass)
 			prevHeap = parts[2]
-		if counter != "0": print genElem( cleanHeap(parts[3]) )
+		if counter != "0": print genElem( cleanHeap(parts[3], stringConstants) )
 	if res: print genGroupHeaderEnd() + genGroupHeaderEnd()
 
 	counts = dict(elem.split(", ") for elem in doopconn.staticFldPointsToCounts(method))
@@ -362,7 +367,7 @@ def genHTML(db, method):
 			if prev != None: print genGroupHeaderEnd()
 			print genGroupHeader(parts[0]+"."+fld, colourClass, id)
 			prev = id
-		if counter != "0": print genElem( cleanHeap(parts[2]) )
+		if counter != "0": print genElem( cleanHeap(parts[2], stringConstants) )
 	if res: print genGroupHeaderEnd()
 	
 	print genHeader("Arrays")
@@ -384,9 +389,9 @@ def genHTML(db, method):
 			prevHeap = None
 		if prevHeap != parts[1]:
 			if prevHeap != None: print genGroupHeaderEnd()
-			print genGroupHeader2(cleanHeap(parts[1]), colourClass)
+			print genGroupHeader2(cleanHeap(parts[1], stringConstants), colourClass)
 			prevHeap = parts[1]
-		if counter != "0": print genElem( cleanHeap(parts[2]) )
+		if counter != "0": print genElem( cleanHeap(parts[2], stringConstants) )
 	if res: print genGroupHeaderEnd() + genGroupHeaderEnd()
 
 	print genHeader("Virtual Call Graph")
@@ -403,7 +408,7 @@ def genHTML(db, method):
 			if prev != None: print genGroupHeaderEnd()
 			print genGroupHeader(invo, colourClass)
 			prev = invo
-		if counter != "0": print genElem( cleanHeap(meth) )
+		if counter != "0": print genElem( cleanHeap(meth, stringConstants) )
 	if res: print genGroupHeaderEnd()
 
 	print FOOTER

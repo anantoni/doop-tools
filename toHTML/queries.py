@@ -287,3 +287,7 @@ _t(invo, toMeth) <-
 
 _c[invo] = cnt <- agg<<cnt = count()>> _t(invo, _).
 """
+
+STRING_CONSTANTS = """
+_(heap) <- StringConstant(heap), !HeapAllocation:Merge[heap] = _.
+"""
