@@ -93,6 +93,9 @@ HEADER = """<!DOCTYPE html>
 	<meta charset="UTF-8">
 	<title>{0}</title>
 	<style type="text/css">
+		body {
+			font-family: Consolas, Monaco, 'Andale Mono', monospace;
+		}
 		h2 {{
 			background: Silver;
 			padding: 15px;
