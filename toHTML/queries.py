@@ -9,27 +9,27 @@ _(index, type, formal) <-
 """
 
 LOCALS = """
-_(type, local) <-
-	meth = "{0}", _localVar(local, meth), Var:Type[local] = type.
+_(meth, type, local) <-
+	_localVar(local, meth), Var:Type[local] = type.
 
 _localVar(local, meth) <-
-	meth = "{0}", Var:DeclaringMethod(local, meth),
+	Reachable(meth), Var:DeclaringMethod(local, meth),
 	!FormalParam[_, meth] = local, !ThisVar[meth] = local.
 """
 
 ALLOCATIONS = """
-_(var, heap) <-
-	meth = "{0}", AssignHeapAllocation(heap, var, meth).
+_(meth, var, heap) <-
+	Reachable(meth), AssignHeapAllocation(heap, var, meth).
 """
 
 ASSIGNS = """
-_(to, from) <-
-	meth = "{0}", AssignLocal(from, to, meth).
+_(meth, to, from) <-
+	Reachable(meth), AssignLocal(from, to, meth).
 """
 
 CASTS = """
-_(to, type, from) <-
-	meth = "{0}", AssignCast(type, from, to, meth).
+_(meth, to, type, from) <-
+	Reachable(meth), AssignCast(type, from, to, meth).
 """
 
 FLD_MODIFIERS = """
@@ -41,23 +41,23 @@ _(fld, mod) <-
 """
 
 LOAD_INSTANCE_FIELDS = """
-_(to, base, fld) <-
-	meth = "{0}", LoadInstanceField(base, fld, to, meth).
+_(meth, to, base, fld) <-
+	Reachable(meth), LoadInstanceField(base, fld, to, meth).
 """
 
 LOAD_STATIC_FIELDS = """
-_(to, cls, fld) <-
-	meth = "{0}", LoadStaticField(fld, to, meth), Field:DeclaringClass[fld] = cls.
+_(meth, to, cls, fld) <-
+	Reachable(meth), LoadStaticField(fld, to, meth), Field:DeclaringClass[fld] = cls.
 """
 
 STORE_INSTANCE_FIELDS = """
-_(base, fld, from) <-
-	meth = "{0}", StoreInstanceField(from, base, fld, meth).
+_(meth, base, fld, from) <-
+	Reachable(meth), StoreInstanceField(from, base, fld, meth).
 """
 
 STORE_STATIC_FIELDS = """
-_(cls, fld, from) <-
-	meth = "{0}", StoreStaticField(from, fld, meth), Field:DeclaringClass[fld] = cls.
+_(meth, cls, fld, from) <-
+	Reachable(meth), StoreStaticField(from, fld, meth), Field:DeclaringClass[fld] = cls.
 """
 
 LOAD_ARRAYS = """

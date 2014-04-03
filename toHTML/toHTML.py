@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-import argparse, doop, sys, re
+import argparse, doop, sys, re, hashlib
 from decimal import *
 
 def cleanVar(var):
-	_, var = var.split("/")
+	_, var = var.split("/", 1)
 	return var
 
 def cleanFld(fld):
@@ -13,7 +13,7 @@ def cleanFld(fld):
 	return fld[:-1]
 
 def cleanHeap(heap, stringConstants):
-	constant = True if heap in stringConstants else False
+	constant = True if stringConstants != None and heap in stringConstants else False
 	heap = heap.replace("<", "").replace(">", "")
 	if constant: return "<b>\"{0}\"</b>".format(heap)
 	else: return heap
@@ -93,9 +93,9 @@ HEADER = """<!DOCTYPE html>
 	<meta charset="UTF-8">
 	<title>{0}</title>
 	<style type="text/css">
-		body {
+		body {{
 			font-family: Consolas, Monaco, 'Andale Mono', monospace;
-		}
+		}}
 		h2 {{
 			background: Silver;
 			padding: 15px;
@@ -146,121 +146,175 @@ FOOTER = """
 </html>
 """
 
+
+def h(x): sha = hashlib.sha512(x) ; return sha.hexdigest()
+
+def toFile(str, method = None, file = None):
+	if file == None:
+		if method != None: file = open("HTMLs/{0}".format(h(method)), 'a')
+		else: raise Exception("Method name not given")
+	file.write(str + "\n")
+	return file
+
+def splitPerMethod(res):
+	d = {}
+	for elem in res:
+		method, rest = elem.split(", ", 1)
+		if method in d: d[method].append(rest)
+		else: d[method] = [rest]
+	return d
+
+
 def genHTML(db, method):
 	doopconn = doop.Connector(db)
 
-	stringConstants = doopconn.stringConstants()
+	#stringConstants = doopconn.stringConstants()
+	#res = " ".join( doopconn.modifiers(method) )
+	#sig = res + " " + filterHTML(sig) + "("
 
-	cl, sig = method[1:-1].split(": ")
-	sig, _ = sig.split("(")
+	#res = doopconn.formals(method)
+	#res.sort()
+	#formals = []
+	#for elem in res:
+	#	parts = elem.split(", ")
+	#	formal = genLink( cleanVar(parts[2]) )
+	#	formals.append( "{0} {1}".format(parts[1], formal) )
+	#sig += ", ".join( formals ) + ")"
+	#print "<h1>[{0}] {1}</h1>".format(cl, sig)
 
-	print HEADER.format(filterHTML(sig))
+	## TODO: Handle empty sets
 
-	res = " ".join( doopconn.modifiers(method) )
-	sig = res + " " + filterHTML(sig) + "("
+	d = splitPerMethod( doopconn.locals() )
+	for method in d:
+		cl, sig = method[1:-1].split(": ")
+		sig, _ = sig.split("(")
 
-	res = doopconn.formals(method)
-	res.sort()
-	formals = []
-	for elem in res:
-		parts = elem.split(", ")
-		formal = genLink( cleanVar(parts[2]) )
-		formals.append( "{0} {1}".format(parts[1], formal) )
-	sig += ", ".join( formals ) + ")"
-	print "<h1>[{0}] {1}</h1>".format(cl, sig)
+		file = toFile(HEADER.format(filterHTML(sig)), method = method)
+		toFile("<h1>[{0}] {1}</h1>".format(cl, filterHTML(sig)), file = file)
+		toFile(genGroupHeader("Local Variables"), file = file)
 
-	print genGroupHeader("Local Variables")
-	res = doopconn.locals(method)
-	res.sort()
-	for elem in res:
-		cls, var = elem.split(", ")
-		var = genLink( cleanVar(var) )
-		print genElem( "{0} {1}".format(cls, var) )
-	print genGroupHeaderEnd()
+		for elem in d[method]:
+			cls, var = elem.split(", ")
+			var = genLink( cleanVar(var) )
+			toFile(genElem("{0} {1}".format(cls, var)), file = file)
+		toFile(genGroupHeaderEnd(), file = file)
 
-	print genGroupHeader("Allocations")
-	res = doopconn.allocations(method)
-	for elem in res:
-		var, heap = elem.split(", ", 1)
-		var = genLink( cleanVar(var) )
-		heap = cleanHeap( "/".join( heap.split("/")[-2:] ), stringConstants )
-		print genElem( "{0} = {1}".format(var, heap) )
-	print genGroupHeaderEnd()
+	d = splitPerMethod( doopconn.allocations() )
+	for method in d:
+		file = toFile(genGroupHeader("Allocations"), method = method)
 
-	print genGroupHeader("Assigns")
-	res = doopconn.assigns(method)
-	for elem in res:
-		toVar, fromVar = elem.split(", ")
-		toVar = genLink( cleanVar(toVar) )
-		fromVar = genLink( cleanVar(fromVar) )
-		print genElem( "{0} = {1}".format(toVar, fromVar) )
-	print genGroupHeaderEnd()
+		for elem in d[method]:
+			var, heap = elem.split(", ", 1)
+			var = genLink( cleanVar(var) )
+			heap = cleanHeap( "/".join( heap.split("/")[-2:] ), None )
+			#heap = cleanHeap( "/".join( heap.split("/")[-2:] ), stringConstants )
+			toFile(genElem( "{0} = {1}".format(var, heap) ), file = file)
+		toFile(genGroupHeaderEnd(), file = file)
 
-	print genGroupHeader("Casts")
-	res = doopconn.casts(method)
-	for elem in res:
-		parts = elem.split(", ")
-		toVar = genLink( cleanVar(toVar) )
-		fromVar = genLink( cleanVar(fromVar) )
-		print genElem( "{0} = ({1}) {2}".format(toVar, parts[1], fromVar) )
-	print genGroupHeaderEnd()
+	d = splitPerMethod( doopconn.assigns() )
+	for method in d:
+		file = toFile(genGroupHeader("Assigns"), method = method)
 
-	res = doopconn.fldModifiers(method)
-	res.sort()
-	modifiers = {}
-	t = []
-	prev = None
-	for elem in res:
-		fld, mod = elem.split(", ")
-		if prev != fld:
-			if prev != None: modifiers[prev] = " ".join( t )
-			t = []
-			prev = fld
-		t.append(mod)
-	if prev != None: modifiers[prev] = " ".join( t )
-	getMods = lambda x: genComment(modifiers[x]) if x in modifiers else ""
+		for elem in d[method]:
+			toVar, fromVar = elem.split(", ")
+			toVar = genLink( cleanVar(toVar) )
+			fromVar = genLink( cleanVar(fromVar) )
+			toFile(genElem( "{0} = {1}".format(toVar, fromVar) ), file = file)
+		toFile(genGroupHeaderEnd(), file = file)
+		
+	d = splitPerMethod( doopconn.casts() )
+	for method in d:
+		file = toFile(genGroupHeader("Casts"), method = method)
 
-	print genGroupHeader("Load Instance Fields")
-	res = doopconn.loadInstanceFields(method)
-	for elem in res:
-		parts = elem.split(", ")
-		toVar = genLink( cleanVar(parts[0]) )
-		baseVar = cleanVar(parts[1])
-		fld = cleanFld(parts[2])
-		fld = genLink( fld, fld+"$from$"+baseVar )
-		print genElem( "{0} = {1} . {2} {3}".format(toVar, genLink(baseVar), fld, getMods(parts[2])) )
-	print genGroupHeaderEnd()
+		for elem in d[method]:
+			parts = elem.split(", ")
+			toVar = genLink( cleanVar(toVar) )
+			fromVar = genLink( cleanVar(fromVar) )
+			toFile(genElem( "{0} = ({1}) {2}".format(toVar, parts[1], fromVar) ), file = file)
+		toFile(genGroupHeaderEnd(), file = file)
 
-	print genGroupHeader("Store Instance Fields")
-	res = doopconn.storeInstanceFields(method)
-	for elem in res:
-		parts = elem.split(", ")
-		baseVar = cleanVar(parts[0])
-		fld = cleanFld(parts[1])
-		fld = genLink( fld, fld+"$from$"+baseVar )
-		fromVar = genLink( cleanVar(parts[2]) )
-		print genElem( "{0} . {1} = {2} {3}".format(genLink(baseVar), fld, fromVar, getMods(parts[1])) )
-	print genGroupHeaderEnd()
+#	res = doopconn.fldModifiers(method)
+#	res.sort()
+#	modifiers = {}
+#	t = []
+#	prev = None
+#	for elem in res:
+#		fld, mod = elem.split(", ")
+#		if prev != fld:
+#			if prev != None: modifiers[prev] = " ".join( t )
+#			t = []
+#			prev = fld
+#		t.append(mod)
+#	if prev != None: modifiers[prev] = " ".join( t )
+#	getMods = lambda x: genComment(modifiers[x]) if x in modifiers else ""
 
-	print genGroupHeader("Load Static Fields")
-	res = doopconn.loadStaticFields(method)
-	for elem in res:
-		parts = elem.split(", ")
-		toVar = genLink( cleanVar(parts[0]) )
-		fld = cleanFld(parts[2])
-		fld = genLink( fld, fld+"$staticFld$"+parts[1] )
-		print genElem( "{0} = {1} . {2} {3}".format(toVar, parts[1], fld, getMods(parts[2])) )
-	print genGroupHeaderEnd()
+	d = splitPerMethod( doopconn.loadInstanceFields() )
+	for method in d:
+		file = toFile(genGroupHeader("Load Instance Fields"), method = method)
 
-	print genGroupHeader("Store Static Fields")
-	res = doopconn.storeStaticFields(method)
-	for elem in res:
-		parts = elem.split(", ")
-		fld = cleanFld(parts[1])
-		fld = genLink( fld, fld+"$staticFld$"+parts[0] )
-		fromVar = genLink( cleanVar(parts[2]) )
-		print genElem( "{0} . {1} = {2} {3}".format(parts[0], fld, fromVar, getMods(parts[1])) )
-	print genGroupHeaderEnd()
+		for elem in d[method]:
+			parts = elem.split(", ")
+			toVar = genLink( cleanVar(parts[0]) )
+			baseVar = cleanVar(parts[1])
+			fld = cleanFld(parts[2])
+			fld = genLink( fld, fld+"$from$"+baseVar )
+			#toFile(genElem( "{0} = {1} . {2} {3}".format(toVar, genLink(baseVar), fld, getMods(parts[2])) ), file = file)
+			toFile(genElem( "{0} = {1} . {2}".format(toVar, genLink(baseVar), fld) ), file = file)
+		toFile(genGroupHeaderEnd(), file = file)
+
+	d = splitPerMethod( doopconn.storeInstanceFields() )
+	for method in d:
+		file = toFile(genGroupHeader("Store Instance Fields"), method = method)
+
+		for elem in d[method]:
+			parts = elem.split(", ")
+			baseVar = cleanVar(parts[0])
+			fld = cleanFld(parts[1])
+			fld = genLink( fld, fld+"$from$"+baseVar )
+			fromVar = genLink( cleanVar(parts[2]) )
+			#toFile(genElem( "{0} . {1} = {2} {3}".format(genLink(baseVar), fld, fromVar, getMods(parts[1])) ), file = file)
+			toFile(genElem( "{0} . {1} = {2}".format(genLink(baseVar), fld, fromVar) ), file = file)
+		toFile(genGroupHeaderEnd(), file = file)
+
+	d = splitPerMethod( doopconn.loadStaticFields() )
+	for method in d:
+		file = toFile(genGroupHeader("Load Static Fields"), method = method)
+
+		for elem in d[method]:
+			parts = elem.split(", ")
+			toVar = genLink( cleanVar(parts[0]) )
+			fld = cleanFld(parts[2])
+			fld = genLink( fld, fld+"$staticFld$"+parts[1] )
+			#toFile(genElem( "{0} = {1} . {2} {3}".format(toVar, parts[1], fld, getMods(parts[2])) ), file = file)
+			toFile(genElem( "{0} = {1} . {2}".format(toVar, parts[1], fld) ), file = file)
+		toFile(genGroupHeaderEnd(), file = file)
+
+	d = splitPerMethod( doopconn.storeStaticFields() )
+	for method in d:
+		file = toFile(genGroupHeader("Store Static Fields"), method = method)
+
+		for elem in d[method]:
+			parts = elem.split(", ")
+			fld = cleanFld(parts[1])
+			fld = genLink( fld, fld+"$staticFld$"+parts[0] )
+			fromVar = genLink( cleanVar(parts[2]) )
+			#toFile(genElem( "{0} . {1} = {2} {3}".format(parts[0], fld, fromVar, getMods(parts[1])) ), file = file)
+			toFile(genElem( "{0} . {1} = {2}".format(parts[0], fld, fromVar) ), file = file)
+		toFile(genGroupHeaderEnd(), file = file)
+
+	return
+
+
+
+
+
+
+
+
+
+
+
+
 
 	print genGroupHeader("Load Arrays")
 	res = doopconn.loadArrays(method)

@@ -15,32 +15,32 @@ class Connector:
 	def formals(self, method):
 		return self.__query(FORMALS.format(method))
 
-	def locals(self, method):
-		return self.__query(LOCALS.format(method), toprint = "_")
+	def locals(self):
+		return self.__query(LOCALS, toprint = "_")
 
-	def allocations(self, method):
-		return self.__query(ALLOCATIONS.format(method))
+	def allocations(self):
+		return self.__query(ALLOCATIONS)
 
-	def assigns(self, method):
-		return self.__query(ASSIGNS.format(method))
+	def assigns(self):
+		return self.__query(ASSIGNS)
 
-	def casts(self, method):
-		return self.__query(CASTS.format(method))
+	def casts(self):
+		return self.__query(CASTS)
 
 	def fldModifiers(self, method):
 		return self.__query(FLD_MODIFIERS.format(method))
 
-	def loadInstanceFields(self, method):
-		return self.__query(LOAD_INSTANCE_FIELDS.format(method))
+	def loadInstanceFields(self):
+		return self.__query(LOAD_INSTANCE_FIELDS)
 
-	def loadStaticFields(self, method):
-		return self.__query(LOAD_STATIC_FIELDS.format(method))
+	def loadStaticFields(self):
+		return self.__query(LOAD_STATIC_FIELDS)
 
-	def storeInstanceFields(self, method):
-		return self.__query(STORE_INSTANCE_FIELDS.format(method))
+	def storeInstanceFields(self):
+		return self.__query(STORE_INSTANCE_FIELDS)
 
-	def storeStaticFields(self, method):
-		return self.__query(STORE_STATIC_FIELDS.format(method))
+	def storeStaticFields(self):
+		return self.__query(STORE_STATIC_FIELDS)
 
 	def loadArrays(self, method):
 		return self.__query(LOAD_ARRAYS.format(method))
