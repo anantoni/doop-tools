@@ -13,7 +13,7 @@ def cleanFld(fld):
 	return fld[:-1]
 
 def cleanHeap(heap, stringConstants):
-	constant = True if stringConstants != None and heap in stringConstants else False
+	constant = True if heap in stringConstants else False
 	heap = heap.replace("<", "").replace(">", "")
 	if constant: return "<b>\"{0}\"</b>".format(heap)
 	else: return heap
@@ -21,7 +21,7 @@ def cleanHeap(heap, stringConstants):
 def filterHTML(value):
 	return value.replace("<", "&lt;").replace(">", "&gt;")
 
-def printInvocations(res, linkInvocation=False):
+def printInvocations(file, res, linkInvocation = False):
 	returnStr = mainStr = ""
 	prev = None
 	for elem in res:
@@ -32,7 +32,7 @@ def printInvocations(res, linkInvocation=False):
 
 		if invo != prev:
 			if prev != None:
-				print genElem( "{0}{1}{2})".format(returnStr, mainStr, ", ".join(actuals)) )
+				toFile(genElem( "{0}{1}{2})".format(returnStr, mainStr, ", ".join(actuals)) ), file = file)
 			returnStr = ""
 			if linkInvocation:
 				mainStr = "{0} (".format(genLink(invo))
@@ -49,7 +49,7 @@ def printInvocations(res, linkInvocation=False):
 			actuals.append(var)
 	
 	if prev != None:
-		print genElem( "{0}{1}{2})".format(returnStr, mainStr, ", ".join(actuals)) )
+		toFile(genElem( "{0}{1}{2})".format(returnStr, mainStr, ", ".join(actuals)) ), file = file)
 
 def getColourClass(cnt):
 	if int(cnt) == 0:
@@ -165,34 +165,43 @@ def splitPerMethod(res):
 	return d
 
 
-def genHTML(db, method):
+def genHTML(db):
 	doopconn = doop.Connector(db)
 
-	#stringConstants = doopconn.stringConstants()
-	#res = " ".join( doopconn.modifiers(method) )
-	#sig = res + " " + filterHTML(sig) + "("
+	modifiersPerMethod = {}
+	d = splitPerMethod( doopconn.modifiers() )
+	for method in d:
+		modifiersPerMethod[method] = " ".join( d[method] )
 
-	#res = doopconn.formals(method)
-	#res.sort()
-	#formals = []
-	#for elem in res:
-	#	parts = elem.split(", ")
-	#	formal = genLink( cleanVar(parts[2]) )
-	#	formals.append( "{0} {1}".format(parts[1], formal) )
-	#sig += ", ".join( formals ) + ")"
-	#print "<h1>[{0}] {1}</h1>".format(cl, sig)
+	formalsPerMethod = {}
+	d = splitPerMethod( doopconn.formals() )
+	for method in d:
+		formals = []
+		d[method].sort()
+		for elem in d[method]:
+			parts = elem.split(", ")
+			formal = genLink( cleanVar(parts[2]) )
+			formals.append( "{0} {1}".format(parts[1], formal) )
+		formalsPerMethod[method] = ", ".join( formals )
+
+	d = doopconn.reachable()
+	for method in d:
+		cl, sig = method[1:-1].split(": ")
+		sig, _ = sig.split("(")
+		modifiers = modifiersPerMethod[method] if method in modifiersPerMethod else ""
+		formals = formalsPerMethod[method] if method in formalsPerMethod else ""
+		sig = modifiers + " " + filterHTML(sig) + "(" + formals + ")"
+		file = toFile(HEADER.format(filterHTML(sig)), method = method)
+		toFile("<h1>[{0}] {1}</h1>".format(cl, filterHTML(sig)), file = file)
+
+
+	stringConstants = doopconn.stringConstants()
 
 	## TODO: Handle empty sets
 
 	d = splitPerMethod( doopconn.locals() )
 	for method in d:
-		cl, sig = method[1:-1].split(": ")
-		sig, _ = sig.split("(")
-
-		file = toFile(HEADER.format(filterHTML(sig)), method = method)
-		toFile("<h1>[{0}] {1}</h1>".format(cl, filterHTML(sig)), file = file)
-		toFile(genGroupHeader("Local Variables"), file = file)
-
+		file = toFile(genGroupHeader("Local Variables"), method = method)
 		for elem in d[method]:
 			cls, var = elem.split(", ")
 			var = genLink( cleanVar(var) )
@@ -202,19 +211,16 @@ def genHTML(db, method):
 	d = splitPerMethod( doopconn.allocations() )
 	for method in d:
 		file = toFile(genGroupHeader("Allocations"), method = method)
-
 		for elem in d[method]:
 			var, heap = elem.split(", ", 1)
 			var = genLink( cleanVar(var) )
-			heap = cleanHeap( "/".join( heap.split("/")[-2:] ), None )
-			#heap = cleanHeap( "/".join( heap.split("/")[-2:] ), stringConstants )
+			heap = cleanHeap( "/".join( heap.split("/")[-2:] ), stringConstants )
 			toFile(genElem( "{0} = {1}".format(var, heap) ), file = file)
 		toFile(genGroupHeaderEnd(), file = file)
 
 	d = splitPerMethod( doopconn.assigns() )
 	for method in d:
 		file = toFile(genGroupHeader("Assigns"), method = method)
-
 		for elem in d[method]:
 			toVar, fromVar = elem.split(", ")
 			toVar = genLink( cleanVar(toVar) )
@@ -225,7 +231,6 @@ def genHTML(db, method):
 	d = splitPerMethod( doopconn.casts() )
 	for method in d:
 		file = toFile(genGroupHeader("Casts"), method = method)
-
 		for elem in d[method]:
 			parts = elem.split(", ")
 			toVar = genLink( cleanVar(toVar) )
@@ -233,134 +238,144 @@ def genHTML(db, method):
 			toFile(genElem( "{0} = ({1}) {2}".format(toVar, parts[1], fromVar) ), file = file)
 		toFile(genGroupHeaderEnd(), file = file)
 
-#	res = doopconn.fldModifiers(method)
-#	res.sort()
-#	modifiers = {}
-#	t = []
-#	prev = None
-#	for elem in res:
-#		fld, mod = elem.split(", ")
-#		if prev != fld:
-#			if prev != None: modifiers[prev] = " ".join( t )
-#			t = []
-#			prev = fld
-#		t.append(mod)
-#	if prev != None: modifiers[prev] = " ".join( t )
-#	getMods = lambda x: genComment(modifiers[x]) if x in modifiers else ""
+
+	modD = splitPerMethod( doopconn.fldModifiers() )
+	modifiersPerMethod = {}
+	for method in modD:
+		modifiers = {}
+		t = []
+		prev = None
+		for elem in modD[method]:
+			fld, mod = elem.split(", ")
+			if prev != fld:
+				if prev != None: modifiers[prev] = " ".join( t )
+				t = []
+				prev = fld
+			t.append(mod)
+		if prev != None: modifiers[prev] = " ".join( t )
+		modifiersPerMethod[method] = modifiers
+
+	#getMods = lambda m, x: genComment(modifiersPerMethod[m][x]) if x in modifiersPerMethod[m] else ""
+	def getMods(m, x):
+		#if m not in modifiersPerMethod: print "(MISSING METHOD) " + m
+		return genComment(modifiersPerMethod[m][x]) if m in modifiersPerMethod and x in modifiersPerMethod[m] else ""
+
 
 	d = splitPerMethod( doopconn.loadInstanceFields() )
 	for method in d:
 		file = toFile(genGroupHeader("Load Instance Fields"), method = method)
-
 		for elem in d[method]:
 			parts = elem.split(", ")
 			toVar = genLink( cleanVar(parts[0]) )
 			baseVar = cleanVar(parts[1])
 			fld = cleanFld(parts[2])
 			fld = genLink( fld, fld+"$from$"+baseVar )
-			#toFile(genElem( "{0} = {1} . {2} {3}".format(toVar, genLink(baseVar), fld, getMods(parts[2])) ), file = file)
-			toFile(genElem( "{0} = {1} . {2}".format(toVar, genLink(baseVar), fld) ), file = file)
+			toFile(genElem( "{0} = {1} . {2} {3}".format(toVar, genLink(baseVar), fld, getMods(method, parts[2])) ), file = file)
 		toFile(genGroupHeaderEnd(), file = file)
 
 	d = splitPerMethod( doopconn.storeInstanceFields() )
 	for method in d:
 		file = toFile(genGroupHeader("Store Instance Fields"), method = method)
-
 		for elem in d[method]:
 			parts = elem.split(", ")
 			baseVar = cleanVar(parts[0])
 			fld = cleanFld(parts[1])
 			fld = genLink( fld, fld+"$from$"+baseVar )
 			fromVar = genLink( cleanVar(parts[2]) )
-			#toFile(genElem( "{0} . {1} = {2} {3}".format(genLink(baseVar), fld, fromVar, getMods(parts[1])) ), file = file)
-			toFile(genElem( "{0} . {1} = {2}".format(genLink(baseVar), fld, fromVar) ), file = file)
+			toFile(genElem( "{0} . {1} = {2} {3}".format(genLink(baseVar), fld, fromVar, getMods(method, parts[1])) ), file = file)
 		toFile(genGroupHeaderEnd(), file = file)
 
 	d = splitPerMethod( doopconn.loadStaticFields() )
 	for method in d:
 		file = toFile(genGroupHeader("Load Static Fields"), method = method)
-
 		for elem in d[method]:
 			parts = elem.split(", ")
 			toVar = genLink( cleanVar(parts[0]) )
 			fld = cleanFld(parts[2])
 			fld = genLink( fld, fld+"$staticFld$"+parts[1] )
-			#toFile(genElem( "{0} = {1} . {2} {3}".format(toVar, parts[1], fld, getMods(parts[2])) ), file = file)
-			toFile(genElem( "{0} = {1} . {2}".format(toVar, parts[1], fld) ), file = file)
+			toFile(genElem( "{0} = {1} . {2} {3}".format(toVar, parts[1], fld, getMods(method, parts[2])) ), file = file)
 		toFile(genGroupHeaderEnd(), file = file)
 
 	d = splitPerMethod( doopconn.storeStaticFields() )
 	for method in d:
 		file = toFile(genGroupHeader("Store Static Fields"), method = method)
-
 		for elem in d[method]:
 			parts = elem.split(", ")
 			fld = cleanFld(parts[1])
 			fld = genLink( fld, fld+"$staticFld$"+parts[0] )
 			fromVar = genLink( cleanVar(parts[2]) )
-			#toFile(genElem( "{0} . {1} = {2} {3}".format(parts[0], fld, fromVar, getMods(parts[1])) ), file = file)
-			toFile(genElem( "{0} . {1} = {2}".format(parts[0], fld, fromVar) ), file = file)
+			toFile(genElem( "{0} . {1} = {2} {3}".format(parts[0], fld, fromVar, getMods(method, parts[1])) ), file = file)
 		toFile(genGroupHeaderEnd(), file = file)
+
+	d = splitPerMethod( doopconn.loadArrays() )
+	for method in d:
+		file = toFile(genGroupHeader("Load Arrays"), method = method)
+		for elem in d[method]:
+			toVar, fromVar = elem.split(", ")
+			toVar = genLink( cleanVar(toVar) )
+			fromVar = cleanVar(fromVar)
+			toFile(genElem( "{0} = {1} [ {2} ]".format(toVar, genLink(fromVar), genLink("?", fromVar+"$index$")) ), file = file)
+		toFile(genGroupHeaderEnd(), file = file)
+
+	d = splitPerMethod( doopconn.storeArrays() )
+	for method in d:
+		file = toFile(genGroupHeader("Store Arrays"), method = method)
+		for elem in d[method]:
+			toVar, fromVar = elem.split(", ")
+			toVar = cleanVar(toVar)
+			fromVar = genLink( cleanVar(fromVar) )
+			toFile(genElem( "{0} [ {1} ] = {2}".format(genLink(toVar), genLink("?", toVar+"$index$"), fromVar) ), file = file)
+		toFile(genGroupHeaderEnd(), file = file)
+
+	d = splitPerMethod( doopconn.returns() )
+	for method in d:
+		file = toFile(genGroupHeader("Returns"), method = method)
+		for elem in d[method]:
+			toFile(genElem( "return {0}".format(genLink(cleanVar(elem))) ), file = file)
+		toFile(genGroupHeaderEnd(), file = file)
+
+
+	d = splitPerMethod( doopconn.specialInv() )
+	for method in d:
+		file = toFile(genGroupHeader("Special Method Invocations"), method = method)
+		d[method].sort()
+		printInvocations(file, d[method])
+		toFile(genGroupHeaderEnd(), file = file)
+
+	d = splitPerMethod( doopconn.virtualInv() )
+	for method in d:
+		file = toFile(genGroupHeader("Virtual Method Invocations"), method = method)
+		d[method].sort()
+		printInvocations(file, d[method], True)
+		toFile(genGroupHeaderEnd(), file = file)
+
+	d = splitPerMethod( doopconn.staticInv() )
+	d2 = splitPerMethod( doopconn.staticInvNoVars() )
+	for method in d:
+		file = toFile(genGroupHeader("Static Method Invocations"), method = method)
+		d[method].sort()
+		printInvocations(file, d[method])
+		# Static Method Invocations without any variable (arguments, return)
+		if method in d2:
+			for elem in d2[method]:
+				_, invo = elem.split("/", 1)
+				toFile(genElem( "{0} ()".format(filterHTML(invo)) ), file = file)
+
+		toFile(genGroupHeaderEnd(), file = file)
+	# Methods not covered before
+	for method in d2:
+		if method not in d:
+			file = toFile(genGroupHeader("Static Method Invocations"), method = method)
+			for elem in d2[method]:
+				_, invo = elem.split("/", 1)
+				toFile(genElem( "{0} ()".format(filterHTML(invo)) ), file = file)
+			toFile(genGroupHeaderEnd(), file = file)
+	d2 = None
 
 	return
 
 
 
-
-
-
-
-
-
-
-
-
-
-	print genGroupHeader("Load Arrays")
-	res = doopconn.loadArrays(method)
-	for elem in res:
-		toVar, fromVar = elem.split(", ")
-		toVar = genLink( cleanVar(toVar) )
-		fromVar = cleanVar(fromVar)
-		print genElem( "{0} = {1} [ {2} ]".format(toVar, genLink(fromVar), genLink("?", fromVar+"$index$")) )
-	print genGroupHeaderEnd()
-
-	print genGroupHeader("Store Arrays")
-	res = doopconn.storeArrays(method)
-	for elem in res:
-		toVar, fromVar = elem.split(", ")
-		toVar = cleanVar(toVar)
-		fromVar = genLink( cleanVar(fromVar) )
-		print genElem( "{0} [ {1} ] = {2}".format(genLink(toVar), genLink("?", toVar+"$index$"), fromVar) )
-	print genGroupHeaderEnd()
-
-	print genGroupHeader("Returns")
-	res = doopconn.returns(method)
-	for elem in res:
-		print genElem( "return {0}".format(genLink(cleanVar(elem))) )
-	print genGroupHeaderEnd()
-
-	print genGroupHeader("Special Method Invocations")
-	res = doopconn.specialInv(method)
-	res.sort()
-	printInvocations(res)
-	print genGroupHeaderEnd()
-
-	print genGroupHeader("Virtual Method Invocations")
-	res = doopconn.virtualInv(method)
-	res.sort()
-	printInvocations(res, True)
-	print genGroupHeaderEnd()
-
-	print genGroupHeader("Static Method Invocations")
-	res = doopconn.staticInv(method)
-	res.sort()
-	printInvocations(res)
-	res = doopconn.staticInvNoVars(method)
-	for elem in res:
-		_, invo = elem.split("/", 1)
-		print genElem( "{0} ()".format(filterHTML(invo)) )
-	print genGroupHeaderEnd()
 
 
 	print "<div style=\"margin-top: 40px; border: 5px dashed grey;\"></div>"
@@ -476,16 +491,14 @@ def main(cmd):
 		cmd = cmd.split()
 
 	parser = argparse.ArgumentParser(
-		usage = 'toHTML.py [-h] workspace method')
+		usage = 'toHTML.py [-h] workspace')
 
 	parser.add_argument('workspace', 
 		help = 'the db directory of a Doop static analysis')
-	parser.add_argument('method', 
-		help = 'the target method to reconstruct')
 
 	args = parser.parse_args(cmd)
      
-	genHTML(args.workspace, args.method)
+	genHTML(args.workspace)
 
 if __name__ == "__main__":
     main(sys.argv[1:])

@@ -1,11 +1,13 @@
+REACHABLE = """_(meth) <- Reachable(meth)."""
+
 MODIFIERS = """
-_(mod) <-
-	meth = "{0}", MethodModifier(mod, meth).
+_(meth, mod) <-
+	Reachable(meth), MethodModifier(mod, meth).
 """
 
 FORMALS = """
-_(index, type, formal) <-
-	meth = "{0}", FormalParam[index, meth] = formal, Var:Type[formal] = type.
+_(meth, index, type, formal) <-
+	Reachable(meth), FormalParam[index, meth] = formal, Var:Type[formal] = type.
 """
 
 LOCALS = """
@@ -13,6 +15,7 @@ _(meth, type, local) <-
 	_localVar(local, meth), Var:Type[local] = type.
 
 _localVar(local, meth) <-
+
 	Reachable(meth), Var:DeclaringMethod(local, meth),
 	!FormalParam[_, meth] = local, !ThisVar[meth] = local.
 """
@@ -33,8 +36,8 @@ _(meth, to, type, from) <-
 """
 
 FLD_MODIFIERS = """
-_(fld, mod) <-
-	meth = "{0}",
+_(meth, fld, mod) <-
+	Reachable(meth),
 	(LoadInstanceField(_, fld, _, meth) ; StoreInstanceField(_, _, fld, meth) ;
 	 LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
 	FieldModifier(mod, fld).
@@ -61,70 +64,70 @@ _(meth, cls, fld, from) <-
 """
 
 LOAD_ARRAYS = """
-_(to, base) <-
-	meth = "{0}", LoadArrayIndex(base, to, meth).
+_(meth, to, base) <-
+	Reachable(meth), LoadArrayIndex(base, to, meth).
 """
 
 STORE_ARRAYS = """
-_(base, from) <-
-	meth = "{0}", StoreArrayIndex(from, base, meth).
+_(meth, base, from) <-
+	Reachable(meth), StoreArrayIndex(from, base, meth).
+"""
+
+RETURNS = """
+_(meth, var) <-
+	Reachable(meth), ReturnVar(var, meth).
 """
 
 
 SPECIAL_INV = """
-_t(invo) <-
-	meth = "{0}", SpecialMethodInvocation:In(invo, meth).
+_t(meth, invo) <-
+	Reachable(meth), SpecialMethodInvocation:In(invo, meth).
 
-_(invo, index, base) -> MethodInvocationRef(invo), int[32](index), VarRef(base).
+_(meth, invo, index, base) -> MethodSignatureRef(meth), MethodInvocationRef(invo), int[32](index), VarRef(base).
 
-_(invo, -1, base) <-
-	_t(invo), SpecialMethodInvocation:Base[invo] = base.
+_(meth, invo, -1, base) <-
+	_t(meth, invo), SpecialMethodInvocation:Base[invo] = base.
 
-_(invo, index, actual) <-
-	_t(invo), ActualParam[index, invo] = actual.
+_(meth, invo, index, actual) <-
+	_t(meth, invo), ActualParam[index, invo] = actual.
 
-_(invo, -2, ret) <-
-	_t(invo), AssignReturnValue[invo] = ret.
+_(meth, invo, -2, ret) <-
+	_t(meth, invo), AssignReturnValue[invo] = ret.
 """
 
 VIRTUAL_INV = """
-_t(invo) <-
-	meth = "{0}", VirtualMethodInvocation:In(invo, meth).
+_t(meth, invo) <-
+	Reachable(meth), VirtualMethodInvocation:In(invo, meth).
 
-_(invo, index, base) -> MethodInvocationRef(invo), int[32](index), VarRef(base).
+_(meth, invo, index, base) -> MethodSignatureRef(meth), MethodInvocationRef(invo), int[32](index), VarRef(base).
 
-_(invo, -1, base) <-
-	_t(invo), VirtualMethodInvocation:Base[invo] = base.
+_(meth, invo, -1, base) <-
+	_t(meth, invo), VirtualMethodInvocation:Base[invo] = base.
 
-_(invo, index, actual) <-
-	_t(invo), ActualParam[index, invo] = actual.
+_(meth, invo, index, actual) <-
+	_t(meth, invo), ActualParam[index, invo] = actual.
 
-_(invo, -2, ret) <-
-	_t(invo), AssignReturnValue[invo] = ret.
+_(meth, invo, -2, ret) <-
+	_t(meth, invo), AssignReturnValue[invo] = ret.
 """
 
 STATIC_INV = """
-_t(invo) <-
-	meth = "{0}", StaticMethodInvocation:In(invo, meth).
+_t(meth, invo) <-
+	Reachable(meth), StaticMethodInvocation:In(invo, meth).
 
-_(invo, index, base) -> MethodInvocationRef(invo), int[32](index), VarRef(base).
+_(meth, invo, index, base) -> MethodSignatureRef(meth), MethodInvocationRef(invo), int[32](index), VarRef(base).
 
-_(invo, index, actual) <-
-	_t(invo), ActualParam[index, invo] = actual.
+_(meth, invo, index, actual) <-
+	_t(meth, invo), ActualParam[index, invo] = actual.
 
-_(invo, -2, ret) <-
-	_t(invo), AssignReturnValue[invo] = ret.
+_(meth, invo, -2, ret) <-
+	_t(meth, invo), AssignReturnValue[invo] = ret.
 """
 
 STATIC_INV_NO_VARS = """
-_(invo) <-
-	meth = "{0}", StaticMethodInvocation:In(invo, meth),
+_(meth, invo) <-
+	Reachable(meth), StaticMethodInvocation:In(invo, meth),
 	!AssignReturnValue[invo] = _, !ActualParam[_, invo] = _.
-"""
-
-RETURNS = """
-_(var) <-
-	meth = "{0}", ReturnVar(var, meth).
 """
 
 

@@ -9,11 +9,14 @@ class Connector:
 		return self._conn.query(queryString, **kwargs)
 
 
-	def modifiers(self, method):
-		return self.__query(MODIFIERS.format(method))
+	def reachable(self):
+		return self.__query(REACHABLE)
 
-	def formals(self, method):
-		return self.__query(FORMALS.format(method))
+	def modifiers(self):
+		return self.__query(MODIFIERS)
+
+	def formals(self):
+		return self.__query(FORMALS)
 
 	def locals(self):
 		return self.__query(LOCALS, toprint = "_")
@@ -27,8 +30,8 @@ class Connector:
 	def casts(self):
 		return self.__query(CASTS)
 
-	def fldModifiers(self, method):
-		return self.__query(FLD_MODIFIERS.format(method))
+	def fldModifiers(self):
+		return self.__query(FLD_MODIFIERS)
 
 	def loadInstanceFields(self):
 		return self.__query(LOAD_INSTANCE_FIELDS)
@@ -42,27 +45,27 @@ class Connector:
 	def storeStaticFields(self):
 		return self.__query(STORE_STATIC_FIELDS)
 
-	def loadArrays(self, method):
-		return self.__query(LOAD_ARRAYS.format(method))
+	def loadArrays(self):
+		return self.__query(LOAD_ARRAYS)
 
-	def storeArrays(self, method):
-		return self.__query(STORE_ARRAYS.format(method))
+	def storeArrays(self):
+		return self.__query(STORE_ARRAYS)
+
+	def returns(self):
+		return self.__query(RETURNS)
 
 
-	def specialInv(self, method):
-		return self.__query(SPECIAL_INV.format(method), toprint = "_")
+	def specialInv(self):
+		return self.__query(SPECIAL_INV, toprint = "_")
 
-	def virtualInv(self, method):
-		return self.__query(VIRTUAL_INV.format(method), toprint = "_")
+	def virtualInv(self):
+		return self.__query(VIRTUAL_INV, toprint = "_")
 
-	def staticInv(self, method):
-		return self.__query(STATIC_INV.format(method), toprint = "_")
+	def staticInv(self):
+		return self.__query(STATIC_INV, toprint = "_")
 
-	def staticInvNoVars(self, method):
-		return self.__query(STATIC_INV_NO_VARS.format(method), toprint = "_")
-
-	def returns(self, method):
-		return self.__query(RETURNS.format(method))
+	def staticInvNoVars(self):
+		return self.__query(STATIC_INV_NO_VARS, toprint = "_")
 
 
 	def varPointsTo(self, method):
