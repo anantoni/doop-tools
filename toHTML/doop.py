@@ -89,11 +89,11 @@ class Connector:
 		return self.__query(STATIC_FLD_POINTS_TO_COUNTS, toprint = "_")
 
 
-	def arrayPointsTo(self, method):
-		return self.__query(ARRAY_POINTS_TO.format(method), toprint = "_")
+	def arrayPointsTo(self):
+		return self.__query(ARRAY_POINTS_TO, toprint = "_")
 
-	def arrayPointsToCounts(self, method):
-		return self.__query(ARRAY_POINTS_TO_COUNTS.format(method), toprint = "_")
+	def arrayPointsToCounts(self):
+		return self.__query(ARRAY_POINTS_TO_COUNTS, toprint = "_")
 
 
 	def virtualCallGraph(self, method):

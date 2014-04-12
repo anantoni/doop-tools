@@ -444,6 +444,35 @@ def genHTML(db):
 			if counter != "0": toFile(genElem( cleanHeap(parts[2], stringConstants) ), file = file)
 		if d[method]: toFile(genGroupHeaderEnd(), file = file)
 
+	d = splitPerMethod( doopconn.arrayPointsTo() )
+	totalCounts = splitPerMethod( doopconn.arrayPointsToCounts() )
+	for method in d:
+		counts = dict(elem.split(", ") for elem in totalCounts[method])
+		file = toFile(genGroupHeader("Arrays"), method = method)
+		prev = None
+		prevHeap = None
+		for elem in d[method]:
+			parts = elem.split(", ")
+			_, base = parts[0].split("/")
+			id = "{0}$index$".format(base)
+			counter = counts[parts[1]]
+			colourClass = getColourClass(counter)
+			if prev != id:
+				if prev != None: toFile(genGroupHeaderEnd(), file = file)
+				toFile(genGroupHeader(base+" [ ? ]", id = id), file = file)
+				prev = id
+				prevHeap = None
+			if prevHeap != parts[1]:
+				if prevHeap != None: toFile(genGroupHeaderEnd(), file = file)
+				toFile(genGroupHeader2(cleanHeap(parts[1], stringConstants), colourClass), file = file)
+				prevHeap = parts[1]
+			if counter != "0": toFile(genElem( cleanHeap(parts[2], stringConstants) ), file = file)
+		if d[method]: toFile(genGroupHeaderEnd() + genGroupHeaderEnd(), file = file)
+
+
+	for method in reach:
+		toFile(FOOTER, method = method)
+
 
 	return
 
@@ -452,29 +481,9 @@ def genHTML(db):
 
 
 	
-	print genHeader("Arrays")
-	counts = dict(elem.split(", ") for elem in doopconn.arrayPointsToCounts(method))
-	res = doopconn.arrayPointsTo(method)
-	res.sort()
-	prev = None
-	prevHeap = None
-	for elem in res:
-		parts = elem.split(", ")
-		_, base = parts[0].split("/")
-		id = "{0}$index$".format(base)
-		counter = counts[parts[1]]
-		colourClass = getColourClass(counter)
-		if prev != id:
-			if prev != None: print genGroupHeaderEnd()
-			print genGroupHeader(base+" [ ? ]", id = id)
-			prev = id
-			prevHeap = None
-		if prevHeap != parts[1]:
-			if prevHeap != None: print genGroupHeaderEnd()
-			print genGroupHeader2(cleanHeap(parts[1], stringConstants), colourClass)
-			prevHeap = parts[1]
-		if counter != "0": print genElem( cleanHeap(parts[2], stringConstants) )
-	if res: print genGroupHeaderEnd() + genGroupHeaderEnd()
+
+
+
 
 	print genHeader("Virtual Call Graph")
 	counts = dict(elem.split(", ") for elem in doopconn.virtualCallGraphCounts(method))
@@ -493,7 +502,6 @@ def genHTML(db):
 		if counter != "0": print genElem( cleanHeap(meth, stringConstants) )
 	if res: print genGroupHeaderEnd()
 
-	print FOOTER
 
 
 def main(cmd):

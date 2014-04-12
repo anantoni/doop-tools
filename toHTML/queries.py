@@ -237,14 +237,14 @@ _c[meth, fld] = cnt <- agg<<cnt = count()>> _t(meth, fld, _).
 """
 
 ARRAY_POINTS_TO = """
-_(base, baseHeap, heap) <-
-	meth = "{0}",
+_(meth, base, baseHeap, heap) <-
+	Reachable(meth),
 	(LoadArrayIndex(base, _, meth) ; StoreArrayIndex(_, base, meth)),
 	VarPointsTo(_, baseHeap, _, base),
 	ArrayIndexPointsTo(_, heap, _, baseHeap).
 
-_(base, baseHeap, dummy) <-
-	meth = "{0}",
+_(meth, base, baseHeap, dummy) <-
+	Reachable(meth),
 	(LoadArrayIndex(base, _, meth) ; StoreArrayIndex(_, base, meth)),
 	VarPointsTo(_, baseHeap, _, base),
 	!ArrayIndexPointsTo(_, _, _, baseHeap),
@@ -252,21 +252,21 @@ _(base, baseHeap, dummy) <-
 """
 
 ARRAY_POINTS_TO_COUNTS = """
-_(baseHeap, 0) <-
-	meth = "{0}",
+_(meth, baseHeap, 0) <-
+	Reachable(meth),
 	(LoadArrayIndex(base, _, meth) ; StoreArrayIndex(_, base, meth)),
 	VarPointsTo(_, baseHeap, _, base),
 	!ArrayIndexPointsTo(_, _, _, baseHeap).
 
-_(baseHeap, cnt) <- _c[baseHeap] = cnt.
+_(meth, baseHeap, cnt) <- _c[meth, baseHeap] = cnt.
 
-_t(baseHeap, heap) <-
-	meth = "{0}",
+_t(meth, baseHeap, heap) <-
+	Reachable(meth),
 	(LoadArrayIndex(base, _, meth) ; StoreArrayIndex(_, base, meth)),
 	VarPointsTo(_, baseHeap, _, base),
 	ArrayIndexPointsTo(_, heap, _, baseHeap).
 
-_c[baseHeap] = cnt <- agg<<cnt = count()>> _t(baseHeap, _).
+_c[meth, baseHeap] = cnt <- agg<<cnt = count()>> _t(meth, baseHeap, _).
 """
 
 VIRTUAL_CALL_GRAPH = """
