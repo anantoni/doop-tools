@@ -153,7 +153,9 @@ _t(meth, var, heap) <-
 _c[meth, var] = cnt <- agg<<cnt = count()>> _t(meth, var, _).
 """
 
-"""VAR_POINTS_TO_COUNTS =
+"""
+Group separately for >1 VP but with exactly the same type
+VAR_POINTS_TO_COUNTS =
 _(var, 0) <-
 	meth = "{0}", Var:DeclaringMethod(var, meth), !VarPointsTo(_, _, _, var).
 
@@ -173,14 +175,14 @@ _tc[var] = cnt <- agg<<cnt = count()>> _tt(var, _).
 """
 
 FLD_POINTS_TO = """
-_(fld, base, baseHeap, heap) <-
-	meth = "{0}",
+_(meth, fld, base, baseHeap, heap) <-
+	Reachable(meth),
 	(LoadInstanceField(base, fld, _, meth) ; StoreInstanceField(_, base, fld, meth)),
 	VarPointsTo(_, baseHeap, _, base),
 	InstanceFieldPointsTo(_, heap, fld, _, baseHeap).
 
-_(fld, base, baseHeap, dummy) <-
-	meth = "{0}",
+_(meth, fld, base, baseHeap, dummy) <-
+	Reachable(meth),
 	(LoadInstanceField(base, fld, _, meth) ; StoreInstanceField(_, base, fld, meth)),
 	VarPointsTo(_, baseHeap, _, base),
 	!InstanceFieldPointsTo(_, _, fld, _, baseHeap),
@@ -188,21 +190,21 @@ _(fld, base, baseHeap, dummy) <-
 """
 
 FLD_POINTS_TO_COUNTS = """
-_(baseHeap, fld, 0) <-
-	meth = "{0}",
+_(meth, baseHeap, fld, 0) <-
+	Reachable(meth),
 	(LoadInstanceField(base, fld, _, meth) ; StoreInstanceField(_, base, fld, meth)),
 	VarPointsTo(_, baseHeap, _, base),
 	!InstanceFieldPointsTo(_, _, fld, _, baseHeap).
 
-_(baseHeap, fld, cnt) <- _c[baseHeap, fld] = cnt.
+_(meth, baseHeap, fld, cnt) <- _c[meth, baseHeap, fld] = cnt.
 
-_t(baseHeap, fld, heap) <-
-	meth = "{0}",
+_t(meth, baseHeap, fld, heap) <-
+	Reachable(meth),
 	(LoadInstanceField(base, fld, _, meth) ; StoreInstanceField(_, base, fld, meth)),
 	VarPointsTo(_, baseHeap, _, base),
 	InstanceFieldPointsTo(_, heap, fld, _, baseHeap).
 
-_c[baseHeap, fld] = cnt <- agg<<cnt = count()>> _t(baseHeap, fld, _).
+_c[meth, baseHeap, fld] = cnt <- agg<<cnt = count()>> _t(meth, baseHeap, fld, _).
 """
 
 STATIC_FLD_POINTS_TO = """

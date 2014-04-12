@@ -396,40 +396,41 @@ def genHTML(db):
 			if counter != "0": toFile(genElem(heap), file = file)
 		if d[method]: toFile(genGroupHeaderEnd(), file = file)
 
+	g1 = lambda x, y: "{0}, {1}".format(x, y)
+	g2 = lambda parts: ( g1(parts[0], parts[1]), parts[2] )
+
+	d = splitPerMethod( doopconn.fldPointsTo() )
+	totalCounts = splitPerMethod( doopconn.fldPointsToCounts() )
+	for method in d:
+		counts = dict( g2(elem.split(", ")) for elem in totalCounts[method] )
+		file = toFile(genGroupHeader("Fields"), method = method)
+		prev = None
+		prevHeap = None
+		for elem in d[method]:
+			parts = elem.split(", ")
+			fld = cleanFld(parts[0])
+			base = cleanVar(parts[1])
+			id = "{0}$from${1}".format(fld, base)
+			counter = counts[ g1(parts[2], parts[0]) ]
+			colourClass = getColourClass(counter)
+			if prev != id:
+				if prev != None: toFile(genGroupHeaderEnd(), file = file)
+				toFile(genGroupHeader(base+"."+fld, id = id), file = file)
+				prev = id
+				prevHeap = None
+			if prevHeap != parts[2]:
+				if prevHeap != None: toFile(genGroupHeaderEnd(), file = file)
+				toFile(genGroupHeader2(cleanHeap(parts[2], stringConstants), colourClass), file = file)
+				prevHeap = parts[2]
+			if counter != "0": toFile(genElem( cleanHeap(parts[3], stringConstants) ), file = file)
+		if d[method]: toFile(genGroupHeaderEnd() + genGroupHeaderEnd(), file = file)
+
 
 	return
 
 
 
 
-
-	print genHeader("Fields")
-
-	g1 = lambda x, y: "{0}, {1}".format(x, y)
-	g2 = lambda parts: ( g1(parts[0], parts[1]), parts[2] )
-	counts = dict( g2(elem.split(", ")) for elem in doopconn.fldPointsToCounts(method) )
-	res = doopconn.fldPointsTo(method)
-	res.sort()
-	prev = None
-	prevHeap = None
-	for elem in res:
-		parts = elem.split(", ")
-		fld = cleanFld(parts[0])
-		base = cleanVar(parts[1])
-		id = "{0}$from${1}".format(fld, base)
-		counter = counts[ g1(parts[2], parts[0]) ]
-		colourClass = getColourClass(counter)
-		if prev != id:
-			if prev != None: print genGroupHeaderEnd()
-			print genGroupHeader(base+"."+fld, id = id)
-			prev = id
-			prevHeap = None
-		if prevHeap != parts[2]:
-			if prevHeap != None: print genGroupHeaderEnd()
-			print genGroupHeader2(cleanHeap(parts[2], stringConstants), colourClass)
-			prevHeap = parts[2]
-		if counter != "0": print genElem( cleanHeap(parts[3], stringConstants) )
-	if res: print genGroupHeaderEnd() + genGroupHeaderEnd()
 
 	counts = dict(elem.split(", ") for elem in doopconn.staticFldPointsToCounts(method))
 	res = doopconn.staticFldPointsTo(method)
