@@ -96,11 +96,11 @@ class Connector:
 		return self.__query(ARRAY_POINTS_TO_COUNTS, toprint = "_")
 
 
-	def virtualCallGraph(self, method):
-		return self.__query(VIRTUAL_CALL_GRAPH.format(method), toprint = "_")
+	def virtualCallGraph(self):
+		return self.__query(VIRTUAL_CALL_GRAPH, toprint = "_")
 
-	def virtualCallGraphCounts(self, method):
-		return self.__query(VIRTUAL_CALL_GRAPH_COUNTS.format(method), toprint = "_")
+	def virtualCallGraphCounts(self):
+		return self.__query(VIRTUAL_CALL_GRAPH_COUNTS, toprint = "_")
 
 
 	def stringConstants(self):

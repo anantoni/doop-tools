@@ -270,27 +270,27 @@ _c[meth, baseHeap] = cnt <- agg<<cnt = count()>> _t(meth, baseHeap, _).
 """
 
 VIRTUAL_CALL_GRAPH = """
-_(invo, toMeth) <-
-	meth = "{0}", VirtualMethodInvocation:In(invo, meth), 
+_(meth, invo, toMeth) <-
+	Reachable(meth), VirtualMethodInvocation:In(invo, meth), 
 	CallGraphEdge(_, invo, _, toMeth).
 
-_(invo, dummy) <-
-	meth = "{0}", VirtualMethodInvocation:In(invo, meth), 
+_(meth, invo, dummy) <-
+	Reachable(meth), VirtualMethodInvocation:In(invo, meth), 
 	!CallGraphEdge(_, invo, _, _), MainMethodDeclaration(dummy).
 """
 
 VIRTUAL_CALL_GRAPH_COUNTS = """
-_(invo, 0) <-
-	meth = "{0}", VirtualMethodInvocation:In(invo, meth), 
+_(meth, invo, 0) <-
+	Reachable(meth), VirtualMethodInvocation:In(invo, meth), 
 	!CallGraphEdge(_, invo, _, _).
 
-_(invo, cnt) <- _c[invo] = cnt.
+_(meth, invo, cnt) <- _c[meth, invo] = cnt.
 
-_t(invo, toMeth) <-
-	meth = "{0}", VirtualMethodInvocation:In(invo, meth), 
+_t(meth, invo, toMeth) <-
+	Reachable(meth), VirtualMethodInvocation:In(invo, meth), 
 	CallGraphEdge(_, invo, _, toMeth).
 
-_c[invo] = cnt <- agg<<cnt = count()>> _t(invo, _).
+_c[meth, invo] = cnt <- agg<<cnt = count()>> _t(meth, invo, _).
 """
 
 STRING_CONSTANTS = """

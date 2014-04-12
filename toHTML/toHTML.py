@@ -469,38 +469,27 @@ def genHTML(db):
 			if counter != "0": toFile(genElem( cleanHeap(parts[2], stringConstants) ), file = file)
 		if d[method]: toFile(genGroupHeaderEnd() + genGroupHeaderEnd(), file = file)
 
+	d = splitPerMethod( doopconn.virtualCallGraph() )
+	totalCounts = splitPerMethod( doopconn.virtualCallGraphCounts() )
+	for method in d:
+		counts = dict(elem.split(", ") for elem in totalCounts[method])
+		file = toFile(genGroupHeader("Virtual Call Graph"), method = method)
+		prev = None
+		for elem in d[method]:
+			invo, meth = elem.split(", ")
+			counter = counts[invo]
+			colourClass = getColourClass(counter)
+			_, invo = invo.split("/", 1)
+			if prev != invo:
+				if prev != None: toFile(genGroupHeaderEnd(), file = file)
+				toFile(genGroupHeader(invo, colourClass), file = file)
+				prev = invo
+			if counter != "0": toFile(genElem( cleanHeap(meth, stringConstants) ), file = file)
+		if d[method]: toFile(genGroupHeaderEnd(), file = file)
+
 
 	for method in reach:
 		toFile(FOOTER, method = method)
-
-
-	return
-
-
-
-
-
-	
-
-
-
-
-	print genHeader("Virtual Call Graph")
-	counts = dict(elem.split(", ") for elem in doopconn.virtualCallGraphCounts(method))
-	res = doopconn.virtualCallGraph(method)
-	res.sort()
-	prev = None
-	for elem in res:
-		invo, meth = elem.split(", ")
-		counter = counts[invo]
-		colourClass = getColourClass(counter)
-		_, invo = invo.split("/", 1)
-		if prev != invo:
-			if prev != None: print genGroupHeaderEnd()
-			print genGroupHeader(invo, colourClass)
-			prev = invo
-		if counter != "0": print genElem( cleanHeap(meth, stringConstants) )
-	if res: print genGroupHeaderEnd()
 
 
 
