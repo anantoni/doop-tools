@@ -82,11 +82,11 @@ class Connector:
 		return self.__query(FLD_POINTS_TO_COUNTS, toprint = "_")
 
 
-	def staticFldPointsTo(self, method):
-		return self.__query(STATIC_FLD_POINTS_TO.format(method), toprint = "_")
+	def staticFldPointsTo(self):
+		return self.__query(STATIC_FLD_POINTS_TO, toprint = "_")
 
-	def staticFldPointsToCounts(self, method):
-		return self.__query(STATIC_FLD_POINTS_TO_COUNTS.format(method), toprint = "_")
+	def staticFldPointsToCounts(self):
+		return self.__query(STATIC_FLD_POINTS_TO_COUNTS, toprint = "_")
 
 
 	def arrayPointsTo(self, method):

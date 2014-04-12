@@ -208,32 +208,32 @@ _c[meth, baseHeap, fld] = cnt <- agg<<cnt = count()>> _t(meth, baseHeap, fld, _)
 """
 
 STATIC_FLD_POINTS_TO = """
-_(cls, fld, heap) <-
-	meth = "{0}",
+_(meth, cls, fld, heap) <-
+	Reachable(meth),
 	(LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
 	StaticFieldPointsTo(_, heap, fld), Field:DeclaringClass[fld] = cls.
 
-_(cls, fld, dummy) <-
-	meth = "{0}",
+_(meth, cls, fld, dummy) <-
+	Reachable(meth),
 	(LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
 	!StaticFieldPointsTo(_, _, fld), Field:DeclaringClass[fld] = cls,
 	MainMethodArgsArray(dummy).
 """
 
 STATIC_FLD_POINTS_TO_COUNTS = """
-_(fld, 0) <-
-	meth = "{0}",
+_(meth, fld, 0) <-
+	Reachable(meth),
 	(LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
 	!StaticFieldPointsTo(_, _, fld).
 
-_(fld, cnt) <- _c[fld] = cnt.
+_(meth, fld, cnt) <- _c[meth, fld] = cnt.
 
-_t(fld, heap) <-
-	meth = "{0}",
+_t(meth, fld, heap) <-
+	Reachable(meth),
 	(LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
 	StaticFieldPointsTo(_, heap, fld).
 
-_c[fld] = cnt <- agg<<cnt = count()>> _t(fld, _).
+_c[meth, fld] = cnt <- agg<<cnt = count()>> _t(meth, fld, _).
 """
 
 ARRAY_POINTS_TO = """

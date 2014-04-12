@@ -425,6 +425,25 @@ def genHTML(db):
 			if counter != "0": toFile(genElem( cleanHeap(parts[3], stringConstants) ), file = file)
 		if d[method]: toFile(genGroupHeaderEnd() + genGroupHeaderEnd(), file = file)
 
+	d = splitPerMethod( doopconn.staticFldPointsTo() )
+	totalCounts = splitPerMethod( doopconn.staticFldPointsToCounts() )
+	for method in d:
+		counts = dict(elem.split(", ") for elem in totalCounts[method])
+		file = toFile(genGroupHeader("Fields"), method = method)
+		prev = None
+		for elem in d[method]:
+			parts = elem.split(", ")
+			counter = counts[parts[1]]
+			colourClass = getColourClass(counter)
+			fld = cleanFld(parts[1])
+			id = "{0}$staticFld${1}".format(fld, parts[0])
+			if prev != id:
+				if prev != None: toFile(genGroupHeaderEnd(), file = file)
+				toFile(genGroupHeader(parts[0]+"."+fld, colourClass, id), file = file)
+				prev = id
+			if counter != "0": toFile(genElem( cleanHeap(parts[2], stringConstants) ), file = file)
+		if d[method]: toFile(genGroupHeaderEnd(), file = file)
+
 
 	return
 
@@ -432,22 +451,6 @@ def genHTML(db):
 
 
 
-	counts = dict(elem.split(", ") for elem in doopconn.staticFldPointsToCounts(method))
-	res = doopconn.staticFldPointsTo(method)
-	res.sort()
-	prev = None
-	for elem in res:
-		parts = elem.split(", ")
-		counter = counts[parts[1]]
-		colourClass = getColourClass(counter)
-		fld = cleanFld(parts[1])
-		id = "{0}$staticFld${1}".format(fld, parts[0])
-		if prev != id:
-			if prev != None: print genGroupHeaderEnd()
-			print genGroupHeader(parts[0]+"."+fld, colourClass, id)
-			prev = id
-		if counter != "0": print genElem( cleanHeap(parts[2], stringConstants) )
-	if res: print genGroupHeaderEnd()
 	
 	print genHeader("Arrays")
 	counts = dict(elem.split(", ") for elem in doopconn.arrayPointsToCounts(method))
