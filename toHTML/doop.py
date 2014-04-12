@@ -68,11 +68,11 @@ class Connector:
 		return self.__query(STATIC_INV_NO_VARS, toprint = "_")
 
 
-	def varPointsTo(self, method):
-		return self.__query(VAR_POINTS_TO.format(method), toprint = "_")
+	def varPointsTo(self):
+		return self.__query(VAR_POINTS_TO, toprint = "_")
 
-	def varPointsToCounts(self, method):
-		return self.__query(VAR_POINTS_TO_COUNTS.format(method), toprint = "_")
+	def varPointsToCounts(self):
+		return self.__query(VAR_POINTS_TO_COUNTS, toprint = "_")
 
 
 	def fldPointsTo(self, method):

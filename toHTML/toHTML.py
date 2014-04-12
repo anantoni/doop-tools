@@ -184,8 +184,8 @@ def genHTML(db):
 			formals.append( "{0} {1}".format(parts[1], formal) )
 		formalsPerMethod[method] = ", ".join( formals )
 
-	d = doopconn.reachable()
-	for method in d:
+	reach = doopconn.reachable()
+	for method in reach:
 		cl, sig = method[1:-1].split(": ")
 		sig, _ = sig.split("(")
 		modifiers = modifiersPerMethod[method] if method in modifiersPerMethod else ""
@@ -372,30 +372,36 @@ def genHTML(db):
 			toFile(genGroupHeaderEnd(), file = file)
 	d2 = None
 
+
+
+	for method in reach:
+		toFile("<div style=\"margin-top: 40px; border: 5px dashed grey;\"></div>", method = method)
+
+	d = splitPerMethod( doopconn.varPointsTo() )
+	totalCounts = splitPerMethod( doopconn.varPointsToCounts() )
+	for method in d:
+		counts = dict(elem.split(", ") for elem in totalCounts[method])
+		file = toFile(genGroupHeader("Variables"), method = method)
+		prev = None
+		for elem in d[method]:
+			var, heap = elem.split(", ")
+			counter = counts[var]
+			colourClass = getColourClass(counter)
+			var = cleanVar(var)
+			heap = cleanHeap(heap, stringConstants)
+			if prev != var:
+				if prev != None: toFile(genGroupHeaderEnd(), file = file)
+				toFile(genGroupHeader(var, colourClass), file = file)
+				prev = var
+			if counter != "0": toFile(genElem(heap), file = file)
+		if d[method]: toFile(genGroupHeaderEnd(), file = file)
+
+
 	return
 
 
 
 
-
-	print "<div style=\"margin-top: 40px; border: 5px dashed grey;\"></div>"
-	print genHeader("Variables")
-	counts = dict(elem.split(", ") for elem in doopconn.varPointsToCounts(method))
-	res = doopconn.varPointsTo(method)
-	res.sort()
-	prev = None
-	for elem in res:
-		var, heap = elem.split(", ")
-		counter = counts[var]
-		colourClass = getColourClass(counter)
-		var = cleanVar(var)
-		heap = cleanHeap(heap, stringConstants)
-		if prev != var:
-			if prev != None: print genGroupHeaderEnd()
-			print genGroupHeader(var, colourClass)
-			prev = var
-		if counter != "0": print genElem(heap)
-	if res: print genGroupHeaderEnd()
 
 	print genHeader("Fields")
 

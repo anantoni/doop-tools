@@ -133,24 +133,24 @@ _(meth, invo) <-
 
 
 VAR_POINTS_TO = """
-_(var, heap) <-
-	meth = "{0}", Var:DeclaringMethod(var, meth), VarPointsTo(_, heap, _, var).
+_(meth, var, heap) <-
+	Reachable(meth), Var:DeclaringMethod(var, meth), VarPointsTo(_, heap, _, var).
 
-_(var, dummy) <-
-	meth = "{0}", Var:DeclaringMethod(var, meth), !VarPointsTo(_, _, _, var),
+_(meth, var, dummy) <-
+	Reachable(meth), Var:DeclaringMethod(var, meth), !VarPointsTo(_, _, _, var),
 	MainMethodArgsArray(dummy).
 """
 
 VAR_POINTS_TO_COUNTS = """
-_(var, 0) <-
-	meth = "{0}", Var:DeclaringMethod(var, meth), !VarPointsTo(_, _, _, var).
+_(meth, var, 0) <-
+	Reachable(meth), Var:DeclaringMethod(var, meth), !VarPointsTo(_, _, _, var).
 
-_(var, cnt) <- _c[var] = cnt.
+_(meth, var, cnt) <- _c[meth, var] = cnt.
 
-_t(var, heap) <-
-	meth = "{0}", Var:DeclaringMethod(var, meth), VarPointsTo(_, heap, _, var).
+_t(meth, var, heap) <-
+	Reachable(meth), Var:DeclaringMethod(var, meth), VarPointsTo(_, heap, _, var).
 
-_c[var] = cnt <- agg<<cnt = count()>> _t(var, _).
+_c[meth, var] = cnt <- agg<<cnt = count()>> _t(meth, var, _).
 """
 
 """VAR_POINTS_TO_COUNTS =
