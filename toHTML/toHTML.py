@@ -238,7 +238,7 @@ def genHTML(db):
 		formals = formalsPerMethod[method] if method in formalsPerMethod else ""
 		sig = modifiers + " " + filterHTML(sig) + "(" + formals + ")"
 		file = toFile(HEADER.format(filterHTML(sig)), method = method)
-		toFile("<h1>[{0}] {1}</h1>".format(cl, filterHTML(sig)), file = file)
+		toFile("<h1>[{0}] {1}</h1>".format(cl, sig), file = file)
 
 
 	stringConstants = doopconn.stringConstants()
