@@ -106,3 +106,12 @@ class Connector:
 	def stringConstants(self):
 		return self.__query(STRING_CONSTANTS)
 
+
+	def callGraphEntryPoints(self):
+		return self.__query(CALL_GRAPH_ENTRY_POINTS, toprint = "_")
+
+	def callGraphInitializers(self):
+		return self.__query(CALL_GRAPH_INITIALIZERS, toprint = "_")
+
+	def callGraphGeneral(self):
+		return self.__query(CALL_GRAPH_GENERAL, toprint = "_")

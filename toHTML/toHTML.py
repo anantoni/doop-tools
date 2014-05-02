@@ -12,11 +12,14 @@ def cleanFld(fld):
 	_, fld = fld.split(" ")
 	return fld[:-1]
 
-def cleanHeap(heap, stringConstants):
+def cleanHeap(heap, stringConstants = {}):
 	constant = True if heap in stringConstants else False
 	heap = heap.replace("<", "").replace(">", "")
 	if constant: return "<b>\"{0}\"</b>".format(heap)
 	else: return heap
+
+def cleanMethod(method):
+	return cleanHeap(method.replace("<init>", "&lt;init&gt;").replace("<clinit>", "&lt;clinit&gt;"))
 
 def filterHTML(value):
 	return value.replace("<", "&lt;").replace(">", "&gt;")
@@ -68,7 +71,7 @@ def genHeader(title):
 
 def genGroupHeader(value, colourClass = "neutral", id = None):
 	id = value if id == None else id
-	return "<h3 class=\"{2}\"><a id=\"{0}\">{1}</a></h3><div>".format(id, value, colourClass)
+	return "<h3 id=\"{0}\" class=\"{2}\"><a >{1}</a></h3><div>".format(id, value, colourClass)
 
 def genGroupHeader2(value, colourClass):
 	return "<h4 class=\"{1}\">{0}</h4><div>".format(value, colourClass)
@@ -116,6 +119,9 @@ HEADER = """<!DOCTYPE html>
 			border: 1px solid grey;
 			border-top: 0;
 		}}
+		hr {{
+			margin: 50px;
+		}}
 		.comment {{
 			margin-left: 20px;
 			color: Grey;
@@ -136,7 +142,17 @@ HEADER = """<!DOCTYPE html>
 		.neutral {{
 			background: Silver;
 		}}
+		#clinitButton, #generalCGButton {{
+			cursor: pointer;
+		}}
 	</style>
+	<script src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+	<script>
+	$(function() {{
+		$("#clinitButton").click( function() {{ $("#clinit").toggle(); }} );  
+		$("#generalCGButton").click( function() {{ $("#generalCG").toggle(); }} );  
+	}});
+	</script>
 </head>
 <body>
 """
@@ -151,8 +167,14 @@ def h(x): sha = hashlib.sha512(x) ; return sha.hexdigest()
 
 def toFile(str, method = None, file = None):
 	if file == None:
-		if method != None: file = open("HTMLs/{0}".format(h(method)), 'a')
+		if method != None: file = open("HTMLs/{0}.html".format(h(method)), 'a')
 		else: raise Exception("Method name not given")
+	file.write(str + "\n")
+	return file
+
+def toIndexFile(str, file = None):
+	if file == None:
+		file = open("HTMLs/index.html", 'a')
 	file.write(str + "\n")
 	return file
 
@@ -164,9 +186,33 @@ def splitPerMethod(res):
 		else: d[method] = [rest]
 	return d
 
+def genCallGraph(d, file):
+	for method in d:
+		toIndexFile("<h3 class=\"neutral\"><a href=\"{0}.html\">{1}</a></h3><div>".format( h(method), cleanMethod(method) ), file = file)
+		for toMethod in d[method]:
+			toIndexFile(genElem("<a href=\"{0}.html\">{1}</a>".format( h(toMethod), cleanMethod(toMethod) )), file = file)
+		toIndexFile(genGroupHeaderEnd(), file = file)
+
 
 def genHTML(db):
 	doopconn = doop.Connector(db)
+
+	file = toIndexFile(HEADER.format("Call Graph - Index"))
+	toIndexFile(genGroupHeader("Entry Points"), file = file)
+	genCallGraph( splitPerMethod( doopconn.callGraphEntryPoints() ), file )
+	toIndexFile(genGroupHeaderEnd(), file = file)
+
+	toIndexFile(genGroupHeader("Class Initializers", id = "clinitButton"), file = file)
+	toIndexFile("<div id=\"clinit\" style=\"display: none;\">", file = file)
+	genCallGraph( splitPerMethod( doopconn.callGraphInitializers() ), file )
+	toIndexFile("</div>" + genGroupHeaderEnd(), file = file)
+
+	toIndexFile(genGroupHeader("General Call Graph", id = "generalCGButton"), file = file)
+	toIndexFile("<div id=\"generalCG\" style=\"display: none;\">", file = file)
+	genCallGraph( splitPerMethod( doopconn.callGraphGeneral() ), file )
+	toIndexFile("</div>" + genGroupHeaderEnd(), file = file)
+	toIndexFile(FOOTER, file = file)
+
 
 	modifiersPerMethod = {}
 	d = splitPerMethod( doopconn.modifiers() )
@@ -255,7 +301,6 @@ def genHTML(db):
 		if prev != None: modifiers[prev] = " ".join( t )
 		modifiersPerMethod[method] = modifiers
 
-	#getMods = lambda m, x: genComment(modifiersPerMethod[m][x]) if x in modifiersPerMethod[m] else ""
 	def getMods(m, x):
 		#if m not in modifiersPerMethod: print "(MISSING METHOD) " + m
 		return genComment(modifiersPerMethod[m][x]) if m in modifiersPerMethod and x in modifiersPerMethod[m] else ""
@@ -371,7 +416,6 @@ def genHTML(db):
 				toFile(genElem( "{0} ()".format(filterHTML(invo)) ), file = file)
 			toFile(genGroupHeaderEnd(), file = file)
 	d2 = None
-
 
 
 	for method in reach:

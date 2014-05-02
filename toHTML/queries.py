@@ -15,7 +15,6 @@ _(meth, type, local) <-
 	_localVar(local, meth), Var:Type[local] = type.
 
 _localVar(local, meth) <-
-
 	Reachable(meth), Var:DeclaringMethod(local, meth),
 	!FormalParam[_, meth] = local, !ThisVar[meth] = local.
 """
@@ -153,27 +152,6 @@ _t(meth, var, heap) <-
 _c[meth, var] = cnt <- agg<<cnt = count()>> _t(meth, var, _).
 """
 
-"""
-Group separately for >1 VP but with exactly the same type
-VAR_POINTS_TO_COUNTS =
-_(var, 0) <-
-	meth = "{0}", Var:DeclaringMethod(var, meth), !VarPointsTo(_, _, _, var).
-
-_(var, cnt) <- _c[var] = cnt, cnt = 1.
-_(var, cnt) <- _c[var] = cnt, cnt >= 2, _tc[var] >= 2.
-_(var, cnt2) <- _c[var] = cnt, cnt >= 2, _tc[var] = 1, cnt2 = -1 * cnt.
-
-_t(var, heap) <-
-	meth = "{0}", Var:DeclaringMethod(var, meth), VarPointsTo(_, heap, _, var).
-
-_c[var] = cnt <- agg<<cnt = count()>> _t(var, _).
-
-_tt(var, type) <-
-	meth = "{0}", Var:DeclaringMethod(var, meth), VarPointsTo(_, heap, _, var), HeapAllocation:Type[heap] = type.
-
-_tc[var] = cnt <- agg<<cnt = count()>> _tt(var, _).
-"""
-
 FLD_POINTS_TO = """
 _(meth, fld, base, baseHeap, heap) <-
 	Reachable(meth),
@@ -295,4 +273,56 @@ _c[meth, invo] = cnt <- agg<<cnt = count()>> _t(meth, invo, _).
 
 STRING_CONSTANTS = """
 _(heap) <- StringConstant(heap), !HeapAllocation:Merge[heap] = _.
+"""
+
+
+CALL_GRAPH_ENTRY_POINTS = """
+_(fromMethod, toMethod) <-
+	_CallGraphEdgeOpt(toMethod, invo),
+	_InvocationInMeth[invo] = fromMethod,
+	(MainMethodDeclaration(fromMethod) ;
+	 ImplicitReachable(fromMethod)).
+
+_CallGraphEdgeOpt(toMethod, invo) <-
+	CallGraphEdge(_, invo, _, toMethod).
+
+_InvocationInMeth[invo] = fromMethod <-
+	(SpecialMethodInvocation:In(invo, fromMethod) ;
+	 VirtualMethodInvocation:In(invo, fromMethod) ;
+	 StaticMethodInvocation:In(invo, fromMethod)).
+"""
+
+CALL_GRAPH_INITIALIZERS = """
+_(fromMethod, toMethod) <-
+	_CallGraphEdgeOpt(toMethod, invo),
+	_InvocationInMeth[invo] = fromMethod,
+	InitializedClass(cls), ClassInitializer[cls] = fromMethod.
+
+_CallGraphEdgeOpt(toMethod, invo) <-
+	CallGraphEdge(_, invo, _, toMethod).
+
+_InvocationInMeth[invo] = fromMethod <-
+	(SpecialMethodInvocation:In(invo, fromMethod) ;
+	 VirtualMethodInvocation:In(invo, fromMethod) ;
+	 StaticMethodInvocation:In(invo, fromMethod)).
+"""
+
+CALL_GRAPH_GENERAL = """
+_(fromMethod, toMethod) <-
+	_CallGraphEdgeOpt(toMethod, invo),
+	_InvocationInMeth[invo] = fromMethod.
+
+_CallGraphEdgeOpt(toMethod, invo) <-
+	CallGraphEdge(_, invo, _, toMethod).
+
+_InvocationInMeth[invo] = fromMethod <-
+	(SpecialMethodInvocation:In(invo, fromMethod) ;
+	 VirtualMethodInvocation:In(invo, fromMethod) ;
+	 StaticMethodInvocation:In(invo, fromMethod)),
+	!_entryPoint(fromMethod).
+
+_entryPoint(method) <-
+	MainMethodDeclaration(method) ;
+	ImplicitReachable(method) ;
+	(InitializedClass(cls), ClassInitializer[cls] = method).
 """
