@@ -279,8 +279,8 @@ def genHTML(db):
 		file = toFile(genGroupHeader("Casts"), method = method)
 		for elem in d[method]:
 			parts = elem.split(", ")
-			toVar = genLink( cleanVar(toVar) )
-			fromVar = genLink( cleanVar(fromVar) )
+			toVar = genLink( cleanVar(parts[0]) )
+			fromVar = genLink( cleanVar(parts[2]) )
 			toFile(genElem( "{0} = ({1}) {2}".format(toVar, parts[1], fromVar) ), file = file)
 		toFile(genGroupHeaderEnd(), file = file)
 
