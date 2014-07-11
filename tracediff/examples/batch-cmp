@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 if [[ -z $DOOP_HOME ]]; then
     export DOOP_HOME=`dirname $( readlink -f $( which doop ) )`
 fi
@@ -16,7 +15,7 @@ export LC_ALL=en_US.UTF-8
 
 while read settings; do
     echo "Testing with Doop options: ${settings}"
-    for benchmark in antlr bloat chart hsqldb jython luindex lusearch pmd xalan
+    for benchmark in antlr bloat chart fop hsqldb jython luindex lusearch pmd xalan
     do
         suffix="-default"
 
@@ -29,18 +28,19 @@ while read settings; do
             done
         fi
 
-        workspace="analyses/${benchmark}/${benchmark}${suffix}"
+        workspace="generated/analyses/${benchmark}/${benchmark}${suffix}"
         trace="traces/$benchmark-large.gxl"
         diff="${workspace/analyses/diffs}.txt"
-        log="${benchmark}${suffix}.log"
+        log="generated/logs/${benchmark}${suffix}.log"
         jars=`echo $DOOP_HOME/jars/dacapo/$benchmark*.jar`
 
         echo "Running benchmark ${benchmark} (stored into $workspace)"
+		mkdir -p $(dirname $log)
 
         set +e
         doop $settings context-insensitive $DOOP_HOME/jars/dacapo/$benchmark.jar | tee $log
         set -e
-
+		
         # Check exit status
         if [[ $? != 0 ]]; then
             echo "Benchmark ${benchmark} timed out for $settings" >&2
@@ -48,7 +48,7 @@ while read settings; do
         fi
 
         mkdir -p $(dirname $workspace)
-        ln -s `readlink -f $DOOP_HOME/last-analysis` $workspace
+        ln -s -f `readlink -f $DOOP_HOME/last-analysis` $workspace
         mkdir -p $(dirname $diff)
         ../tracediff.py $workspace $trace -cp "${jars// /:}" -a2a -a2l -l2a > $diff
     done

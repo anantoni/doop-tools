@@ -6,7 +6,7 @@ class Connector:
 
     def query(self, queryString, **kwargs):
         results = []
-        command = "bloxbatch -db %s -query '%s' " % (self._workspace, queryString)
+        command = "bloxbatch.sh -db %s -query '%s' " % (self._workspace, queryString)
 
         # Optional argument
         if "toprint" in kwargs:
