@@ -10,7 +10,7 @@ _(c) <-
 
 METHODS = """
 _(meth) <- 
-   MethodSignatureRef(meth).
+   MethodSignature(meth).
 """
 
 REACHABLE_METHODS = """
@@ -25,7 +25,7 @@ _(meth) <-
 
 NATIVE_METHODS = """
 _(meth) <- 
-   MethodSignatureRef(meth), MethodModifier("native", meth).
+   MethodSignature(meth), MethodModifier("native", meth).
 """
 
 REACHABLE_APP_METHODS = """

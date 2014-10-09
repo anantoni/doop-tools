@@ -1,4 +1,5 @@
 import blox
+import sys
 from queries import *
 
 class Connector:
@@ -13,9 +14,13 @@ class Connector:
         """
         Canonicalizes a signature by removing its return type
         """
-        rec, meth = signature.split(": ")
-        simplename, delim, args = meth.partition('(')
-        return rec + ': ' + simplename.rpartition(' ')[2] + '(' + args
+        try:
+            rec, meth = signature.split(": ")
+            simplename, delim, args = meth.partition('(')
+            return rec + ': ' + simplename.rpartition(' ')[2] + '(' + args
+        except ValueError as err:
+            print >> sys.stderr, "Erroneous signature %s" % signature
+            raise err
 
     @classmethod
     def __parse_edge(cls, line):
