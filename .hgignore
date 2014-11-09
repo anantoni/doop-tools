@@ -1,0 +1,8 @@
+jvmti-tracer/build
+gxl-util/build/
+tracediff/examples/analyses
+
+# use glob syntax.
+syntax: glob
+
+*.pyc

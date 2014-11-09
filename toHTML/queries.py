@@ -1,0 +1,328 @@
+REACHABLE = """_(meth) <- Reachable(meth)."""
+
+MODIFIERS = """
+_(meth, mod) <-
+	Reachable(meth), MethodModifier(mod, meth).
+"""
+
+FORMALS = """
+_(meth, index, type, formal) <-
+	Reachable(meth), FormalParam[index, meth] = formal, Var:Type[formal] = type.
+"""
+
+LOCALS = """
+_(meth, type, local) <-
+	_localVar(local, meth), Var:Type[local] = type.
+
+_localVar(local, meth) <-
+	Reachable(meth), Var:DeclaringMethod(local, meth),
+	!FormalParam[_, meth] = local, !ThisVar[meth] = local.
+"""
+
+ALLOCATIONS = """
+_(meth, var, heap) <-
+	Reachable(meth), AssignHeapAllocation(heap, var, meth).
+"""
+
+ASSIGNS = """
+_(meth, to, from) <-
+	Reachable(meth), AssignLocal(from, to, meth).
+"""
+
+CASTS = """
+_(meth, to, type, from) <-
+	Reachable(meth), AssignCast(type, from, to, meth).
+"""
+
+FLD_MODIFIERS = """
+_(meth, fld, mod) <-
+	Reachable(meth),
+	(LoadInstanceField(_, fld, _, meth) ; StoreInstanceField(_, _, fld, meth) ;
+	 LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
+	FieldModifier(mod, fld).
+"""
+
+LOAD_INSTANCE_FIELDS = """
+_(meth, to, base, fld) <-
+	Reachable(meth), LoadInstanceField(base, fld, to, meth).
+"""
+
+LOAD_STATIC_FIELDS = """
+_(meth, to, cls, fld) <-
+	Reachable(meth), LoadStaticField(fld, to, meth), Field:DeclaringClass[fld] = cls.
+"""
+
+STORE_INSTANCE_FIELDS = """
+_(meth, base, fld, from) <-
+	Reachable(meth), StoreInstanceField(from, base, fld, meth).
+"""
+
+STORE_STATIC_FIELDS = """
+_(meth, cls, fld, from) <-
+	Reachable(meth), StoreStaticField(from, fld, meth), Field:DeclaringClass[fld] = cls.
+"""
+
+LOAD_ARRAYS = """
+_(meth, to, base) <-
+	Reachable(meth), LoadArrayIndex(base, to, meth).
+"""
+
+STORE_ARRAYS = """
+_(meth, base, from) <-
+	Reachable(meth), StoreArrayIndex(from, base, meth).
+"""
+
+RETURNS = """
+_(meth, var) <-
+	Reachable(meth), ReturnVar(var, meth).
+"""
+
+
+SPECIAL_INV = """
+_t(meth, invo) <-
+	Reachable(meth), SpecialMethodInvocation:In(invo, meth).
+
+_(meth, invo, index, base) -> MethodSignatureRef(meth), MethodInvocationRef(invo), int[32](index), VarRef(base).
+
+_(meth, invo, -1, base) <-
+	_t(meth, invo), SpecialMethodInvocation:Base[invo] = base.
+
+_(meth, invo, index, actual) <-
+	_t(meth, invo), ActualParam[index, invo] = actual.
+
+_(meth, invo, -2, ret) <-
+	_t(meth, invo), AssignReturnValue[invo] = ret.
+"""
+
+VIRTUAL_INV = """
+_t(meth, invo) <-
+	Reachable(meth), VirtualMethodInvocation:In(invo, meth).
+
+_(meth, invo, index, base) -> MethodSignatureRef(meth), MethodInvocationRef(invo), int[32](index), VarRef(base).
+
+_(meth, invo, -1, base) <-
+	_t(meth, invo), VirtualMethodInvocation:Base[invo] = base.
+
+_(meth, invo, index, actual) <-
+	_t(meth, invo), ActualParam[index, invo] = actual.
+
+_(meth, invo, -2, ret) <-
+	_t(meth, invo), AssignReturnValue[invo] = ret.
+"""
+
+STATIC_INV = """
+_t(meth, invo) <-
+	Reachable(meth), StaticMethodInvocation:In(invo, meth).
+
+_(meth, invo, index, base) -> MethodSignatureRef(meth), MethodInvocationRef(invo), int[32](index), VarRef(base).
+
+_(meth, invo, index, actual) <-
+	_t(meth, invo), ActualParam[index, invo] = actual.
+
+_(meth, invo, -2, ret) <-
+	_t(meth, invo), AssignReturnValue[invo] = ret.
+"""
+
+STATIC_INV_NO_VARS = """
+_(meth, invo) <-
+	Reachable(meth), StaticMethodInvocation:In(invo, meth),
+	!AssignReturnValue[invo] = _, !ActualParam[_, invo] = _.
+"""
+
+
+
+VAR_POINTS_TO = """
+_(meth, var, heap) <-
+	Reachable(meth), Var:DeclaringMethod(var, meth), VarPointsTo(_, heap, _, var).
+
+_(meth, var, dummy) <-
+	Reachable(meth), Var:DeclaringMethod(var, meth), !VarPointsTo(_, _, _, var),
+	MainMethodArgsArray(dummy).
+"""
+
+VAR_POINTS_TO_COUNTS = """
+_(meth, var, 0) <-
+	Reachable(meth), Var:DeclaringMethod(var, meth), !VarPointsTo(_, _, _, var).
+
+_(meth, var, cnt) <- _c[meth, var] = cnt.
+
+_t(meth, var, heap) <-
+	Reachable(meth), Var:DeclaringMethod(var, meth), VarPointsTo(_, heap, _, var).
+
+_c[meth, var] = cnt <- agg<<cnt = count()>> _t(meth, var, _).
+"""
+
+FLD_POINTS_TO = """
+_(meth, fld, base, baseHeap, heap) <-
+	Reachable(meth),
+	(LoadInstanceField(base, fld, _, meth) ; StoreInstanceField(_, base, fld, meth)),
+	VarPointsTo(_, baseHeap, _, base),
+	InstanceFieldPointsTo(_, heap, fld, _, baseHeap).
+
+_(meth, fld, base, baseHeap, dummy) <-
+	Reachable(meth),
+	(LoadInstanceField(base, fld, _, meth) ; StoreInstanceField(_, base, fld, meth)),
+	VarPointsTo(_, baseHeap, _, base),
+	!InstanceFieldPointsTo(_, _, fld, _, baseHeap),
+	MainMethodArgsArray(dummy).
+"""
+
+FLD_POINTS_TO_COUNTS = """
+_(meth, baseHeap, fld, 0) <-
+	Reachable(meth),
+	(LoadInstanceField(base, fld, _, meth) ; StoreInstanceField(_, base, fld, meth)),
+	VarPointsTo(_, baseHeap, _, base),
+	!InstanceFieldPointsTo(_, _, fld, _, baseHeap).
+
+_(meth, baseHeap, fld, cnt) <- _c[meth, baseHeap, fld] = cnt.
+
+_t(meth, baseHeap, fld, heap) <-
+	Reachable(meth),
+	(LoadInstanceField(base, fld, _, meth) ; StoreInstanceField(_, base, fld, meth)),
+	VarPointsTo(_, baseHeap, _, base),
+	InstanceFieldPointsTo(_, heap, fld, _, baseHeap).
+
+_c[meth, baseHeap, fld] = cnt <- agg<<cnt = count()>> _t(meth, baseHeap, fld, _).
+"""
+
+STATIC_FLD_POINTS_TO = """
+_(meth, cls, fld, heap) <-
+	Reachable(meth),
+	(LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
+	StaticFieldPointsTo(_, heap, fld), Field:DeclaringClass[fld] = cls.
+
+_(meth, cls, fld, dummy) <-
+	Reachable(meth),
+	(LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
+	!StaticFieldPointsTo(_, _, fld), Field:DeclaringClass[fld] = cls,
+	MainMethodArgsArray(dummy).
+"""
+
+STATIC_FLD_POINTS_TO_COUNTS = """
+_(meth, fld, 0) <-
+	Reachable(meth),
+	(LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
+	!StaticFieldPointsTo(_, _, fld).
+
+_(meth, fld, cnt) <- _c[meth, fld] = cnt.
+
+_t(meth, fld, heap) <-
+	Reachable(meth),
+	(LoadStaticField(fld, _, meth) ; StoreStaticField(_, fld, meth)),
+	StaticFieldPointsTo(_, heap, fld).
+
+_c[meth, fld] = cnt <- agg<<cnt = count()>> _t(meth, fld, _).
+"""
+
+ARRAY_POINTS_TO = """
+_(meth, base, baseHeap, heap) <-
+	Reachable(meth),
+	(LoadArrayIndex(base, _, meth) ; StoreArrayIndex(_, base, meth)),
+	VarPointsTo(_, baseHeap, _, base),
+	ArrayIndexPointsTo(_, heap, _, baseHeap).
+
+_(meth, base, baseHeap, dummy) <-
+	Reachable(meth),
+	(LoadArrayIndex(base, _, meth) ; StoreArrayIndex(_, base, meth)),
+	VarPointsTo(_, baseHeap, _, base),
+	!ArrayIndexPointsTo(_, _, _, baseHeap),
+	MainMethodArgsArray(dummy).
+"""
+
+ARRAY_POINTS_TO_COUNTS = """
+_(meth, baseHeap, 0) <-
+	Reachable(meth),
+	(LoadArrayIndex(base, _, meth) ; StoreArrayIndex(_, base, meth)),
+	VarPointsTo(_, baseHeap, _, base),
+	!ArrayIndexPointsTo(_, _, _, baseHeap).
+
+_(meth, baseHeap, cnt) <- _c[meth, baseHeap] = cnt.
+
+_t(meth, baseHeap, heap) <-
+	Reachable(meth),
+	(LoadArrayIndex(base, _, meth) ; StoreArrayIndex(_, base, meth)),
+	VarPointsTo(_, baseHeap, _, base),
+	ArrayIndexPointsTo(_, heap, _, baseHeap).
+
+_c[meth, baseHeap] = cnt <- agg<<cnt = count()>> _t(meth, baseHeap, _).
+"""
+
+VIRTUAL_CALL_GRAPH = """
+_(meth, invo, toMeth) <-
+	Reachable(meth), VirtualMethodInvocation:In(invo, meth), 
+	CallGraphEdge(_, invo, _, toMeth).
+
+_(meth, invo, dummy) <-
+	Reachable(meth), VirtualMethodInvocation:In(invo, meth), 
+	!CallGraphEdge(_, invo, _, _), MainMethodDeclaration(dummy).
+"""
+
+VIRTUAL_CALL_GRAPH_COUNTS = """
+_(meth, invo, 0) <-
+	Reachable(meth), VirtualMethodInvocation:In(invo, meth), 
+	!CallGraphEdge(_, invo, _, _).
+
+_(meth, invo, cnt) <- _c[meth, invo] = cnt.
+
+_t(meth, invo, toMeth) <-
+	Reachable(meth), VirtualMethodInvocation:In(invo, meth), 
+	CallGraphEdge(_, invo, _, toMeth).
+
+_c[meth, invo] = cnt <- agg<<cnt = count()>> _t(meth, invo, _).
+"""
+
+STRING_CONSTANTS = """
+_(heap) <- StringConstant(heap), !HeapAllocation:Merge[heap] = _.
+"""
+
+
+CALL_GRAPH_ENTRY_POINTS = """
+_(fromMethod, toMethod) <-
+	_CallGraphEdgeOpt(toMethod, invo),
+	_InvocationInMeth[invo] = fromMethod,
+	(MainMethodDeclaration(fromMethod) ;
+	 ImplicitReachable(fromMethod)).
+
+_CallGraphEdgeOpt(toMethod, invo) <-
+	CallGraphEdge(_, invo, _, toMethod).
+
+_InvocationInMeth[invo] = fromMethod <-
+	(SpecialMethodInvocation:In(invo, fromMethod) ;
+	 VirtualMethodInvocation:In(invo, fromMethod) ;
+	 StaticMethodInvocation:In(invo, fromMethod)).
+"""
+
+CALL_GRAPH_INITIALIZERS = """
+_(fromMethod, toMethod) <-
+	_CallGraphEdgeOpt(toMethod, invo),
+	_InvocationInMeth[invo] = fromMethod,
+	InitializedClass(cls), ClassInitializer[cls] = fromMethod.
+
+_CallGraphEdgeOpt(toMethod, invo) <-
+	CallGraphEdge(_, invo, _, toMethod).
+
+_InvocationInMeth[invo] = fromMethod <-
+	(SpecialMethodInvocation:In(invo, fromMethod) ;
+	 VirtualMethodInvocation:In(invo, fromMethod) ;
+	 StaticMethodInvocation:In(invo, fromMethod)).
+"""
+
+CALL_GRAPH_GENERAL = """
+_(fromMethod, toMethod) <-
+	_CallGraphEdgeOpt(toMethod, invo),
+	_InvocationInMeth[invo] = fromMethod.
+
+_CallGraphEdgeOpt(toMethod, invo) <-
+	CallGraphEdge(_, invo, _, toMethod).
+
+_InvocationInMeth[invo] = fromMethod <-
+	(SpecialMethodInvocation:In(invo, fromMethod) ;
+	 VirtualMethodInvocation:In(invo, fromMethod) ;
+	 StaticMethodInvocation:In(invo, fromMethod)),
+	!_entryPoint(fromMethod).
+
+_entryPoint(method) <-
+	MainMethodDeclaration(method) ;
+	ImplicitReachable(method) ;
+	(InitializedClass(cls), ClassInitializer[cls] = method).
+"""
