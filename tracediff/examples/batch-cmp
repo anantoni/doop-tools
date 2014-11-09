@@ -4,6 +4,8 @@ if [[ -z $DOOP_HOME ]]; then
     export DOOP_HOME=`dirname $( readlink -f $( which doop ) )`
 fi
 
+echo "DOOP_HOME is : $DOOP_HOME"
+
 if ! hash doop 2>/dev/null; then
     echo "error: doop command is not available" >&2
     exit 1
@@ -35,12 +37,12 @@ while read settings; do
         jars=`echo $DOOP_HOME/jars/dacapo/$benchmark*.jar`
 
         echo "Running benchmark ${benchmark} (stored into $workspace)"
-		mkdir -p $(dirname $log)
+        mkdir -p $(dirname $log)
 
         set +e
         doop $settings context-insensitive $DOOP_HOME/jars/dacapo/$benchmark.jar | tee $log
         set -e
-		
+
         # Check exit status
         if [[ $? != 0 ]]; then
             echo "Benchmark ${benchmark} timed out for $settings" >&2
