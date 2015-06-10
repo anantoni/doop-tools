@@ -21,6 +21,8 @@ import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
 import soot.SootResolver;
+import soot.MethodOrMethodContext;
+
 
 public class BytecodeToJimple {
 
@@ -162,16 +164,16 @@ public class BytecodeToJimple {
 
 
 
-            soot.jimple.spark.SparkTransformer.v().transform("", opt);      
+            soot.jimple.spark.SparkTransformer.v().transform("", opt);
             soot.jimple.toolkits.callgraph.CallGraphBuilder builder =
                 new soot.jimple.toolkits.callgraph.CallGraphBuilder(scene.getPointsToAnalysis());
             builder.build();
             scene.getReachableMethods().update();
 
             Set<SootClass> set = new HashSet<SootClass>();
-            Iterator<SootMethod> iterator = (Iterator) scene.getReachableMethods().listener();
+            Iterator<? extends MethodOrMethodContext> iterator = scene.getReachableMethods().listener();
             while(iterator.hasNext()) {
-                SootMethod method = iterator.next();
+                SootMethod method = (SootMethod) iterator.next();
                 System.err.println("class: " + method.getDeclaringClass());
                 set.add(method.getDeclaringClass());
             }
@@ -179,7 +181,7 @@ public class BytecodeToJimple {
         }
 
         if(_mode == Mode.FULL) {
-            classes = (Collection) scene.getClasses();
+            classes = scene.getClasses();
         }
 
         write(classes);
@@ -190,7 +192,7 @@ public class BytecodeToJimple {
      */
     private static void write(Collection<SootClass> classes) throws Exception {
         for(SootClass c : classes) {
-            Iterator<SootMethod> methodIt = (Iterator) c.methodIterator();
+            Iterator<SootMethod> methodIt = c.methodIterator();
             while (methodIt.hasNext()) {
                 SootMethod m = methodIt.next();
                 if( m.isConcrete() ) {
