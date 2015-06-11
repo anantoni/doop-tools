@@ -1,4 +1,4 @@
-sootClasses = ../../nexgen/lib/sootclasses-2.5.0.jar
+sootClasses = ../../lib/sootclasses-2.5.0.jar
 exe         = ../bin/bytecode2jimple
 
 all:

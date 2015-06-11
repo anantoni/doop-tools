@@ -140,7 +140,7 @@ public class BytecodeToJimple {
         if(_mode == Mode.FULL || _mode == Mode.CALLGRAPH) {
             soot.options.Options.v().set_full_resolver(true);
         }
-        soot.options.Options.v().setPhaseOption("jb", "use-original-names:true");
+        //soot.options.Options.v().setPhaseOption("jb", "use-original-names:true");
 
         Scene scene = Scene.v();
         Collection<SootClass> classes = new ArrayList<SootClass>();
