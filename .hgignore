@@ -1,6 +1,10 @@
 jvmti-tracer/build
 gxl-util/build/
 tracediff/examples/analyses
+bytecode2jimple/build
+bytecode2jimple/soot-tools.jar
+bin/bytecode2jimple
+
 
 # use glob syntax.
 syntax: glob
