@@ -8,7 +8,7 @@ filename=${filenameJava%.*}
 filenameJar=${filename}.jar
 
 tmpDir=$(mktemp -d)
-javac $filenameJava -d $tmpDir
+javac $filenameJava -d $tmpDir -g
 jar cvfe $filenameJar $filename -C $tmpDir .
 rm -rf $tmpDir
 
