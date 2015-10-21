@@ -11,12 +11,14 @@ import java.util.List;
 //import java.util.Map;
 //import java.util.Set;
 
+import soot.Body;
 import soot.ClassProvider;
 import soot.PhaseOptions;
 import soot.Printer;
 import soot.Scene;
 import soot.SootClass;
 import soot.SootMethod;
+import soot.shimple.Shimple;
 
 
 public class BytecodeToJimple {
@@ -27,11 +29,13 @@ public class BytecodeToJimple {
         INPUTS
     }
 
+    private static boolean _ssa = false;
     private static Mode _mode = null;
     private static boolean _toStdout = false;
     private static String _outputDir = null;
     private static List<String> _inputs = new ArrayList<>();
     private static List<String> _libraries = new ArrayList<>();
+    private static String _suffix = ".jimple";
 
     private static int shift(String[] args, int index) {
         if (args.length == index + 1) {
@@ -41,26 +45,31 @@ public class BytecodeToJimple {
         return index + 1;
     }
 
-    private static void usage() {
+    private static void usage(boolean failOnExit) {
         System.err.println("usage: bytecode2jimple [options] file...");
         System.err.println("options:");
-        System.err.println("  --full          Generate Jimple files using full transitive resolution");
-        System.err.println("  --stdout        Write Jimple in stdout");
-        System.err.println("  -d <directory>  Specify directory for generated Jimple files (defaults to current dir)");
+        System.err.println("  --ssa           Generate Shimple instead of Jimple");
+        System.err.println("  --full          Generate Jimple/Shimple files using full transitive resolution");
+        System.err.println("  --stdout        Write Jimple/Shimple in stdout");
+        System.err.println("  -d <directory>  Specify directory for generated Jimple/Shimple files (defaults to current dir)");
         System.err.println("  -l <archive>    Find classes in jar/zip archive");
         System.err.println("  -lsystem        Find classes in default system classes");
         System.err.println("  -h --help       Print this help message");
-        System.exit(0);
+        System.exit(failOnExit ? 1 : 0);
     }
 
     public static void main(String[] args) {
         try {
             if (args.length == 0) {
-                usage();
+                usage(false);
             }
 
             for (int i = 0; i < args.length; i++) {
-                if (args[i].equals("--full")) {
+                if (args[i].equals("--ssa")) {
+                    _ssa = true;
+                    _suffix = ".shimple";
+                }
+                else if (args[i].equals("--full")) {
                     if (_mode != null) {
                         System.err.println("error: duplicate mode argument");
                         System.exit(1);
@@ -94,12 +103,12 @@ public class BytecodeToJimple {
                     _libraries.add(javaHome + File.separator + "lib" + File.separator + "jsse.jar");
                 }
                 else if (args[i].equals("-h") || args[i].equals("--help")) {
-                    usage();
+                    usage(false);
                 }
                 else {
                     if (args[i].charAt(0) == '-') {
                         System.err.println("error: unrecognized option: " + args[i]);
-                        System.exit(1);
+                        usage(true);
                     }
                     else {
                         _inputs.add(args[i]);
@@ -206,6 +215,13 @@ public class BytecodeToJimple {
             for (SootMethod m : c.getMethods()) {
                 if ( m.isConcrete() ) {
                     m.retrieveActiveBody();
+
+                    if ( _ssa ) {
+                        Body b = m.getActiveBody();
+                        b = Shimple.v().newBody(b);
+                        m.setActiveBody(b);
+                    }
+
                 }
             }
 
@@ -214,7 +230,7 @@ public class BytecodeToJimple {
                 writer.flush();
             }
             else {
-                writer = new PrintWriter(new File(_outputDir, c.getName() + ".jimple"));
+                writer = new PrintWriter(new File(_outputDir, c.getName() + _suffix));
                 Printer.v().printTo(c, writer);
                 writer.close();
             }
