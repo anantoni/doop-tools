@@ -116,6 +116,10 @@ public class BytecodeToJimple {
                 }
             }
 
+            if (_libraries.isEmpty()) {
+                System.err.println("warning: no extra libraries specified (you may need -lsystem)");
+            }
+
             if (_mode == null) {
                 _mode = Mode.INPUTS;
             }
