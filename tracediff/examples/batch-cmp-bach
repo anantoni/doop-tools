@@ -1,105 +1,65 @@
 #!/bin/bash
 
-# Check arguments
-if [ $# -ne 1 ]; then
-    echo "Usage: $0 OUTDIR" >&2; exit 1
-fi
-
-# Check for DOOP_HOME
 if [[ -z $DOOP_HOME ]]; then
-    export DOOP_HOME=`dirname $( readlink -f $( which doop ) )`
-
-    if [[ -z $DOOP_HOME ]]; then
-        echo "DOOP_HOME is not set. Cannot continue..." >&2; exit 1
-    fi
-fi
-
-
-echo "DOOP_HOME is : $DOOP_HOME"
-
-if ! hash doop 2>/dev/null; then
-    echo "error: doop command is not available" >&2
+    echo "error: DOOP_HOME is not set" >&2
     exit 1
 fi
 
 set -e # Exit immediately if a command exits with a nonzero exit status
 set -u # Treat unset variables as an error
-export LC_ALL=en_US.UTF-8
 
-# Create output directory
-outdir=$1/`date +"%F"`
-mkdir -p $outdir
-echo "Created output directory $outdir"
+settings_vector=(
+'--enable-reflection --toggle-distinguish-reflection-only-string-constants --enable-reflection-merge-member-constants --enable-reflection-string-flow-analysis --enable-reflection-substring-analysis'
+'--enable-reflection --toggle-distinguish-reflection-only-string-constants --enable-reflection-merge-member-constants --enable-reflection-string-flow-analysis'
+'--enable-reflection --toggle-distinguish-reflection-only-string-constants --enable-reflection-merge-member-constants --enable-reflection-string-flow-analysis --enable-reflection-substring-analysis --enable-reflection-use-based-analysis'
+'--enable-reflection --toggle-distinguish-reflection-only-string-constants --enable-reflection-merge-member-constants --enable-reflection-string-flow-analysis --enable-reflection-use-based-analysis'
+''
+)
 
-while read settings; do
-    echo "Testing with Doop options: ${settings}"
+total=${#settings_vector[*]}
+for (( i=0; i<=$(( $total -1 )); i++ ))
+do
+    settings="${settings_vector[$i]}"
     for benchmark in avrora batik eclipse h2 jython luindex lusearch pmd sunflow xalan
     do
-        suffix="-default"
+        suffix="-tamiflex"
 
         if [[ -n $settings ]]; then
             suffix=""
             for option in $settings; do
-                option="${option/--enable-/-f}"
-                option="${option/--disable-/-fno-}"
+                option="${option/--enable-/_f-}"
+                option="${option/--disable-/_fno-}"
+                option="${option/--toggle-/_ft-}"
                 suffix="${suffix}${option%-analysis}"
             done
         fi
 
-        # Compute jar set
-        benchmark_dir=${DOOP_HOME}/benchmarks/dacapo-bach/$benchmark
-        mainjar=${benchmark_dir}/${benchmark}.jar
-        jars="$mainjar `echo ${benchmark_dir}/${benchmark}-libs/*.jar`"
-
-        # Ensure main jar exists
-        if [[ ! -e $mainjar ]]; then
-            echo "error: jar $mainjar not found" >&2
-            exit 1
-        fi
-
-        # Print list of jars
-        for jar in $jars; do echo "Adding `basename $jar` ..."; done
-
-        # Locate benchmark trace
+        workspace="$DOOP_HOME/out/analyses/${benchmark}/${benchmark}.bach${suffix}"
         trace="traces/bach/$benchmark-default.gxl"
-        if [[ ! -e $trace ]]; then
-            echo "error: trace $trace not found" >&2
-            exit 1
-        fi
+        diff="${workspace/analyses/diffs}.txt"
+        log="${workspace/analyses/logs}.log"
+        jars=`echo $DOOP_HOME/benchmarks/dacapo-bach/$benchmark/${benchmark}.jar $DOOP_HOME/benchmarks/dacapo-bach/$benchmark/${benchmark}-libs/*.jar`
+        mkdir -p $(dirname $diff) $(dirname $log)
 
-        # Compute output paths
-        workspace="${outdir}/.analyses/${benchmark}.bach${suffix}"
-        log="${workspace/.analyses/.logs}.log"
-        diff="${workspace/.analyses/}"
-
-        echo "Running benchmark ${benchmark} (stored into $workspace)"
-        mkdir -p $(dirname $log)
-
-        # Run doop
+        echo "Running benchmark ${benchmark} with options: $settings"
         set +e
-        doop --allow-phantom --dacapo-bach --main Harness $settings context-insensitive $mainjar | tee $log
+        cd $DOOP_HOME
+        ./doop -a context-insensitive -j $DOOP_HOME/benchmarks/dacapo-bach/$benchmark/${benchmark}.jar --dacapo-bach --cache $settings | tee $log
+        status=$?
+        cd - > /dev/null
         set -e
 
         # Check exit status
-        if [[ $? != 0 ]]; then
+        if [[ $status != 0 ]]; then
             echo "Benchmark ${benchmark} timed out for $settings" >&2
             continue
         fi
 
         mkdir -p $(dirname $workspace)
         ln -s -f `readlink -f $DOOP_HOME/last-analysis` $workspace
-        mkdir -p $(dirname $diff)
 
-        echo "Trace: $trace" > $diff
-        echo "Analysis: `cat $workspace/.doop-meta/command-line`" >> $diff
-
-        ../tracediff.py $workspace $trace -cp "${jars// /:}" -a2a -a2l -l2a >> $diff
+        ../tracediff.py $workspace $trace -cp "${jars// /:}" -a2a -a2l -l2a > $diff
     done
     # Cleanup old analyses
-    rm -rf ${DOOP_HOME}/generated/*/*
-done <<'EOF'
---disable-reflection-substring-analysis
-
---enable-use-based-reflection-analysis
---enable-invention-of-unknown-reflective-objects
-EOF
+    rm -rf ${DOOP_HOME}/out/analyses/*
+done

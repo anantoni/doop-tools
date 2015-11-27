@@ -1,62 +1,65 @@
 #!/bin/bash
 
 if [[ -z $DOOP_HOME ]]; then
-    export DOOP_HOME=`dirname $( readlink -f $( which doop ) )`
-fi
-
-echo "DOOP_HOME is : $DOOP_HOME"
-
-if ! hash doop 2>/dev/null; then
-    echo "error: doop command is not available" >&2
+    echo "error: DOOP_HOME is not set" >&2
     exit 1
 fi
 
 set -e # Exit immediately if a command exits with a nonzero exit status
 set -u # Treat unset variables as an error
-export LC_ALL=en_US.UTF-8
 
-while read settings; do
-    echo "Testing with Doop options: ${settings}"
+settings_vector=(
+'--enable-reflection --toggle-distinguish-reflection-only-string-constants --enable-reflection-merge-member-constants --enable-reflection-string-flow-analysis --enable-reflection-substring-analysis'
+'--enable-reflection --toggle-distinguish-reflection-only-string-constants --enable-reflection-merge-member-constants --enable-reflection-string-flow-analysis'
+'--enable-reflection --toggle-distinguish-reflection-only-string-constants --enable-reflection-merge-member-constants --enable-reflection-string-flow-analysis --enable-reflection-substring-analysis --enable-reflection-use-based-analysis'
+'--enable-reflection --toggle-distinguish-reflection-only-string-constants --enable-reflection-merge-member-constants --enable-reflection-string-flow-analysis --enable-reflection-use-based-analysis'
+''
+)
+
+total=${#settings_vector[*]}
+for (( i=0; i<=$(( $total -1 )); i++ ))
+do
+    settings="${settings_vector[$i]}"
     for benchmark in antlr bloat chart fop hsqldb jython luindex lusearch pmd xalan
     do
-        suffix="-default"
+        suffix="-tamiflex"
 
         if [[ -n $settings ]]; then
             suffix=""
             for option in $settings; do
-                option="${option/--enable-/-f}"
-                option="${option/--disable-/-fno-}"
+                option="${option/--enable-/_f-}"
+                option="${option/--disable-/_fno-}"
+                option="${option/--toggle-/_ft-}"
                 suffix="${suffix}${option%-analysis}"
             done
         fi
 
-        workspace="generated/analyses/${benchmark}/${benchmark}${suffix}"
+        workspace="$DOOP_HOME/out/analyses/${benchmark}/${benchmark}${suffix}"
         trace="traces/$benchmark-large.gxl"
         diff="${workspace/analyses/diffs}.txt"
-        log="generated/logs/${benchmark}${suffix}.log"
-        jars=`echo $DOOP_HOME/jars/dacapo/$benchmark*.jar`
+        log="${workspace/analyses/logs}.log"
+        jars=`echo $DOOP_HOME/benchmarks/dacapo-2006/${benchmark}*.jar`
+        mkdir -p $(dirname $diff) $(dirname $log)
 
-        echo "Running benchmark ${benchmark} (stored into $workspace)"
-        mkdir -p $(dirname $log)
-
+        echo "Running benchmark ${benchmark} with options: $settings"
         set +e
-        doop $settings context-insensitive $DOOP_HOME/jars/dacapo/$benchmark.jar | tee $log
+        cd $DOOP_HOME
+        ./doop -a context-insensitive -j $DOOP_HOME/benchmarks/dacapo-2006/${benchmark}.jar --dacapo --cache $settings | tee $log
+        status=$?
+        cd - > /dev/null
         set -e
 
         # Check exit status
-        if [[ $? != 0 ]]; then
+        if [[ $status != 0 ]]; then
             echo "Benchmark ${benchmark} timed out for $settings" >&2
             continue
         fi
 
         mkdir -p $(dirname $workspace)
         ln -s -f `readlink -f $DOOP_HOME/last-analysis` $workspace
-        mkdir -p $(dirname $diff)
+
         ../tracediff.py $workspace $trace -cp "${jars// /:}" -a2a -a2l -l2a > $diff
     done
-done <<'EOF'
-
---disable-reflection-substring-analysis
---enable-use-based-reflection-analysis
---disable-reflection-substring-analysis --enable-use-based-reflection-analysis
-EOF
+    # Cleanup old analyses
+    rm -rf ${DOOP_HOME}/out/analyses/*
+done
