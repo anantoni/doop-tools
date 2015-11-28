@@ -44,7 +44,7 @@ do
         echo "Running benchmark ${benchmark} with options: $settings"
         set +e
         cd $DOOP_HOME
-        ./doop -a context-insensitive -j $DOOP_HOME/benchmarks/dacapo-bach/$benchmark/${benchmark}.jar --dacapo-bach --cache $settings | tee $log
+        ./doop -a context-insensitive -j $DOOP_HOME/benchmarks/dacapo-bach/$benchmark/${benchmark}.jar --dacapo-bach --timeout 90 --cache $settings | tee $log
         status=$?
         cd - > /dev/null
         set -e
